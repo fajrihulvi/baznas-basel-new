@@ -1,0 +1,15 @@
+# Cadangan bila document root TIDAK bisa diarahkan ke public/ (cPanel) atau
+# saat dibuka sebagai subfolder XAMPP (http://localhost/baznas-basel).
+# Semua request diteruskan ke public/, sehingga app/, config/, storage/, .env, dst.
+# tidak pernah bisa diakses langsung.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

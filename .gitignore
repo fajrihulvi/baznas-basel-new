@@ -1,0 +1,43 @@
+# Rahasia & konfigurasi lokal
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Dump database / data pribadi — JANGAN pernah masuk repo
+*.sql
+*.sql.gz
+*.sql.zip
+!database/migrations/*.sql
+
+# Dependensi & binary alat
+/vendor/
+/bin/tailwindcss
+/node_modules/
+
+# Runtime
+/storage/cache/*
+/storage/logs/*
+!/storage/cache/.gitkeep
+!/storage/logs/.gitkeep
+
+# Upload konten (dibackup terpisah, bukan di git)
+/public/uploads/*
+!/public/uploads/.htaccess
+!/public/uploads/.gitkeep
+
+# Paket rilis & manifest integritas (dibuat build-rilis.sh)
+/rilis/
+/integritas.json
+
+# Berkas sementara uji (tests/)
+/tests/tmp/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Bukti transfer muzaki (data pribadi) — tidak pernah masuk repo
+/storage/bukti/

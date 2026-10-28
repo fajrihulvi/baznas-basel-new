@@ -1,0 +1,13 @@
+# Folder upload: hanya file statis, tanpa eksekusi skrip apa pun
+Options -Indexes -ExecCGI
+
+<FilesMatch "\.(php\d?|phtml|phar|pht|phps|cgi|pl|py|sh|shtml)$">
+    Require all denied
+</FilesMatch>
+
+RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phar .pht
+RemoveType .php .php3 .php4 .php5 .php7 .php8 .phtml .phar .pht
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>

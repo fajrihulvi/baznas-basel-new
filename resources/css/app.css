@@ -1,0 +1,194 @@
+/* Input Tailwind v4 — build: ./build-css.sh (output: public/assets/css/app.css) */
+@import "tailwindcss" source(none);
+
+@source "../../app/Views";
+@source "../../public/assets/js";
+
+/* Design token §13.1 — menjadi utility: bg-primary, text-accent, text-muted, bg-surface, dst. */
+@theme {
+  --color-primary: #0b6b3a;
+  --color-primary-dark: #084f2b;
+  --color-accent: #f2b705;
+  --color-ink: #1f2937;
+  --color-muted: #6b7280;
+  --color-surface: #f7f8f6;
+
+  /* Sementara system font (§16 no. 8 belum diputuskan) — nol request font */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+  --radius-card: 1rem;
+}
+
+@layer base {
+  body {
+    line-height: 1.6;
+  }
+
+  /* Fokus keyboard: hijau di latar terang, emas di latar gelap (.on-dark) — keduanya ≥ 3:1 */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .on-dark :focus-visible {
+    outline-color: var(--color-accent);
+  }
+
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  dialog::backdrop {
+    background: rgb(17 24 39 / 0.5);
+  }
+
+  .sheet[open] {
+    animation: sheet-naik 0.22s ease-out;
+  }
+
+  @keyframes sheet-naik {
+    from {
+      transform: translateY(100%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Baris geser horizontal (chip, carousel, mitra) tanpa scrollbar terlihat */
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Section di bawah layar: browser melewati layout & paint sampai mendekati viewport.
+   Ukuran perkiraan diingat (auto) sehingga tidak menimbulkan pergeseran layout. */
+@utility cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 640px;
+}
+
+/* Isi artikel/halaman dari editor (HTML tersanitasi: p, h2–h4, ul/ol, a, table, blockquote, img, iframe) */
+@layer components {
+  .konten {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    overflow-wrap: break-word;
+
+    & > * + * {
+      margin-top: 1em;
+    }
+    & h2 {
+      margin-top: 1.75em;
+      font-size: 1.375rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    & h3 {
+      margin-top: 1.5em;
+      font-size: 1.1875rem;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    & h4 {
+      margin-top: 1.25em;
+      font-weight: 700;
+    }
+    & a {
+      color: var(--color-primary);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    & a:hover {
+      color: var(--color-primary-dark);
+    }
+    & strong,
+    & b {
+      font-weight: 700;
+    }
+    & ul {
+      list-style: disc;
+      padding-left: 1.5rem;
+    }
+    & ol {
+      list-style: decimal;
+      padding-left: 1.5rem;
+    }
+    & li + li {
+      margin-top: 0.35em;
+    }
+    & li::marker {
+      color: var(--color-primary);
+    }
+    & blockquote {
+      border-left: 4px solid var(--color-accent);
+      padding-left: 1rem;
+      color: var(--color-muted);
+      font-style: italic;
+    }
+    & img {
+      height: auto;
+      max-width: 100%;
+      border-radius: 1rem;
+    }
+    & iframe {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      border-radius: 1rem;
+    }
+    & table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      border-collapse: collapse;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+    & th,
+    & td {
+      border: 1px solid var(--color-gray-200);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    & th {
+      background: var(--color-surface);
+      font-weight: 700;
+    }
+    & hr {
+      border-color: var(--color-gray-200);
+    }
+  }
+}
+
+/* Kartu di bawah layar dalam grid daftar (kabar, program, pencarian): sama seperti cv-auto,
+   perkiraan tinggi ±satu kartu. Gambar di dalamnya baru dimuat saat mendekati layar. */
+@utility cv-kartu {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+/* Disembunyikan sampai JS aktif; <noscript> dapat menampilkannya kembali.
+   (Atribut hidden tidak bisa ditimpa: preflight Tailwind memakai !important di dalam layer.) */
+@layer components {
+  [data-js-sembunyi] {
+    display: none;
+  }
+}

@@ -1,0 +1,53 @@
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+# --- Front controller ---------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # File & folder yang benar-benar ada disajikan langsung
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# File tersembunyi (.env, .git, .htaccess) tidak pernah disajikan
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# --- Kompresi gzip ------------------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+    AddOutputFilterByType DEFLATE application/javascript text/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml application/rss+xml image/svg+xml application/manifest+json
+</IfModule>
+
+# --- Tipe MIME ----------------------------------------------------------------
+<IfModule mod_mime.c>
+    AddType font/woff2 .woff2
+    AddType image/webp .webp
+    AddType image/avif .avif
+    AddType application/manifest+json .webmanifest
+</IfModule>
+
+<IfModule mod_headers.c>
+    # --- Cache aset statis: 1 tahun (CSS/JS memakai ?v=filemtime, upload memakai nama acak)
+    <FilesMatch "\.(css|js|mjs|woff2|svg|png|jpe?g|gif|webp|avif|ico|pdf)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # --- Security headers
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    # style-src 'unsafe-inline': konten editor lama memakai atribut style; script tetap ketat.
+    # GA4 (bila dipakai) → tambahkan https://www.googletagmanager.com ke script-src & connect-src.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://i.ytimg.com; font-src 'self'; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    # HSTS & pengalihan http→https diatur aplikasi lewat .env (APP_FORCE_HTTPS, APP_HSTS) — lihat docs/fase-8/DEPLOY.md
+
+    Header unset X-Powered-By
+</IfModule>
