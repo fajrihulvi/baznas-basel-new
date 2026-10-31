@@ -69,7 +69,8 @@ $d = req($jar, 'GET', "$base/admin/tautan-rusak");
 $cek('daftar 200, ada path & tombol "Buat pengalihan"', $d['kode'] === 200 && str_contains($d['body'], e8($P)) && str_contains($d['body'], 'redirect/baru?dari=' . rawurlencode($P)));
 $cek('tidak ada tombol Tambah/Ubah (aksi hapus saja)', !str_contains($d['body'], 'Tambah catatan') && !str_contains($d['body'], '/tautan-rusak/' . $b['id'] . '/ubah'));
 $cek('form tambah tautan-rusak → 404', req($jar, 'GET', "$base/admin/tautan-rusak/baru")['kode'] === 404);
-$cek('menu memuat Tautan Rusak, Pengalihan URL, Status Sistem', str_contains($d['body'], 'Tautan Rusak') && str_contains($d['body'], 'Pengalihan URL') && str_contains($d['body'], 'Status Sistem'));
+$cek('menu memuat Pengalihan URL; Tautan Rusak & Status Sistem disembunyikan', str_contains($d['body'], 'Pengalihan URL')
+    && !str_contains($d['body'], 'href="' . $base . '/admin/tautan-rusak"') && !str_contains($d['body'], 'href="' . $base . '/admin/status"'));
 
 echo "\n== Admin: Pengalihan URL\n";
 $form = req($jar, 'GET', "$base/admin/redirect/baru?dari=" . rawurlencode($P));

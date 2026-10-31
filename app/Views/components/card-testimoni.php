@@ -2,7 +2,7 @@
 /**
  * Kartu testimoni: foto bulat (atau inisial), nama, profesi, rating, kutipan 3 baris yang bisa dibuka.
  *
- * @var array{id: int, nama: string, profesi: ?string, foto: ?string, isi: string, rating: int} $testimoni
+ * @var array{id: int, nama: string, profesi: ?string, peran?: ?string, foto: ?string, isi: string, rating: int} $testimoni
  */
 $t = $testimoni;
 $rating = max(0, min(5, (int) $t['rating']));
@@ -21,8 +21,9 @@ $idIsi = 'testimoni-' . (int) $t['id'];
         <?php endif ?>
         <figcaption class="min-w-0">
             <span class="block font-bold text-ink"><?= e($t['nama']) ?></span>
-            <?php if (!empty($t['profesi'])): ?>
-            <span class="block text-sm text-muted"><?= e($t['profesi']) ?></span>
+            <?php $keterangan = implode(' · ', array_filter([App\Models\Testimoni::PERAN[$t['peran'] ?? ''] ?? null, $t['profesi'] ?? null])) ?>
+            <?php if ($keterangan !== ''): ?>
+            <span class="block text-sm text-muted"><?= e($keterangan) ?></span>
             <?php endif ?>
         </figcaption>
     </div>

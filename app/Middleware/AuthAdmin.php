@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Core\Auth;
+use App\Core\HttpException;
 use App\Core\Middleware;
 use App\Core\Request;
 use App\Core\Response;
 use Closure;
 
-/** Wajib login untuk /admin/*; halaman admin tidak pernah di-cache & tidak diindeks. */
+/**
+ * Wajib login untuk /admin/*; halaman admin tidak pernah di-cache & tidak diindeks.
+ * Peran Kepala hanya boleh membuka dasbor, keluar, dan halaman di config admin.akses_kepala — selain itu 403.
+ */
 final class AuthAdmin implements Middleware
 {
     public function handle(Request $request, Closure $next): Response
@@ -20,8 +24,25 @@ final class AuthAdmin implements Middleware
 
             return Response::redirect(url('admin/masuk', $ke), 303);
         }
+        if (Auth::kepala() && !self::bolehUntukKepala($request->path())) {
+            throw new HttpException(403);
+        }
 
         return self::tanpaCache($next($request));
+    }
+
+    private static function bolehUntukKepala(string $path): bool
+    {
+        if ($path === '/admin' || $path === '/admin/keluar') {
+            return true;
+        }
+        foreach ((array) config('admin.akses_kepala', []) as $kunci) {
+            if ($path === '/admin/' . $kunci || str_starts_with($path, '/admin/' . $kunci . '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function tanpaCache(Response $response): Response

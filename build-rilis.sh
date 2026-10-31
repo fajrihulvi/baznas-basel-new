@@ -15,7 +15,7 @@ composer dump-autoload --optimize --no-dev --quiet
 
 rm -rf rilis/.tmp
 mkdir -p "$TMP"
-rsync -a \
+rsync -a --exclude='.DS_Store' \
     --include='/.htaccess' --include='/.env.production.example' --include='/composer.json' \
     --include='/app/***' --include='/config/***' --include='/routes/***' --include='/vendor/***' \
     --include='/database/' --include='/database/migrations/***' --include='/database/scripts/***' \

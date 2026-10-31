@@ -14,6 +14,15 @@ use App\Models\KonfirmasiPembayaran;
 $user  = Auth::user();
 $flash = Session::getFlash('alert');
 $menu  = (array) config('admin.menu', []);
+if (Auth::kepala()) {
+    // Kepala: hanya Dasbor (selalu tampil) + menu yang diizinkan
+    $izin = array_flip((array) config('admin.akses_kepala', []));
+    $menu = array_filter(array_map(static fn (array $item): array => array_intersect_key($item, $izin), $menu));
+} elseif (!Auth::administrator()) {
+    // Operator: sembunyikan menu khusus Administrator (halamannya sendiri juga menolak dengan 403)
+    $khusus = array_flip((array) config('admin.khusus_administrator', []));
+    $menu = array_filter(array_map(static fn (array $item): array => array_diff_key($item, $khusus), $menu));
+}
 $path  = current_path();
 $aktif = static fn (string $kunci): bool => $path === '/admin/' . $kunci || str_starts_with($path, '/admin/' . $kunci . '/');
 $antrean = !empty($polos) ? 0 : KonfirmasiPembayaran::hitungBaru();
@@ -35,8 +44,8 @@ $antrean = !empty($polos) ? 0 : KonfirmasiPembayaran::hitungBaru();
     <header class="sticky top-0 z-30 border-b border-gray-200 bg-white">
         <div class="flex h-14 items-center gap-3 px-4">
             <a href="<?= e(url('admin')) ?>" class="flex items-center gap-2 font-bold text-primary">
-                <img src="<?= e(asset('img/logo-garuda.webp')) ?>" alt="" width="81" height="96" class="h-8 w-auto">
-                Admin BAZNAS Basel
+                <?= $this->insert('partials/logo', ['class' => 'h-10 w-auto', 'sizes' => '58px']) ?>
+                <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm">Admin</span>
             </a>
             <a href="<?= e(url()) ?>" target="_blank" rel="noopener" class="ml-auto hidden text-sm font-semibold text-muted hover:text-primary sm:inline">Lihat situs ↗</a>
             <span class="hidden text-sm text-muted md:inline"><?= e($user['nama'] ?? '') ?></span>
@@ -78,5 +87,6 @@ $antrean = !empty($polos) ? 0 : KonfirmasiPembayaran::hitungBaru();
 
     <div id="pengumuman" class="sr-only" aria-live="polite"></div>
     <script type="module" src="<?= e(asset('js/admin.js')) ?>"></script>
+    <?= $this->section('scripts') ?>
 </body>
 </html>

@@ -18,6 +18,36 @@ document.addEventListener('input', (e) => {
   input.value = n ? fmt.format(n) : '';
 });
 
+// --- Penggeser (input range) menampilkan nilainya di <output for> --------------------
+document.querySelectorAll('input[type="range"]').forEach((geser) => {
+  const keluaran = geser.form?.querySelector(`output[for="${geser.id}"]`);
+  if (keluaran) geser.addEventListener('input', () => { keluaran.textContent = `${geser.value}%`; });
+});
+
+// --- Pratinjau warna + transparansi kotak ([data-pratinjau-warna]) -------------------
+document.querySelectorAll('[data-pratinjau-warna]').forEach((kotak) => {
+  const form = kotak.closest('form');
+  const warna = form.elements[kotak.dataset.pratinjauWarna];
+  const bawaan = form.elements[`bawaan_${kotak.dataset.pratinjauWarna}`];
+  const opasitas = kotak.dataset.pratinjauOpasitas ? form.elements[kotak.dataset.pratinjauOpasitas] : null;
+  const perbarui = () => {
+    const pakaiBawaan = bawaan?.checked;
+    warna.disabled = false; // tetap terkirim; server mengabaikannya bila "bawaan" dicentang
+    warna.style.opacity = pakaiBawaan ? '0.4' : '';
+    if (opasitas) opasitas.closest('div').style.opacity = pakaiBawaan ? '0.4' : '';
+    kotak.classList.toggle('bg-primary/10', Boolean(pakaiBawaan));
+    if (pakaiBawaan) {
+      kotak.style.backgroundColor = '';
+      return;
+    }
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(warna.value.slice(i, i + 2), 16));
+    kotak.style.backgroundColor = `rgb(${r} ${g} ${b} / ${opasitas ? opasitas.value : 100}%)`;
+  };
+  form.addEventListener('input', perbarui);
+  form.addEventListener('change', perbarui);
+  perbarui();
+});
+
 // --- Pratinjau gambar sebelum diunggah (data: URL — diizinkan CSP) --------------------
 document.querySelectorAll('input[type="file"][data-pratinjau]').forEach((input) => {
   const img = document.createElement('img');

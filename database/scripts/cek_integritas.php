@@ -15,9 +15,10 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 
-/** Folder kode yang dipantau (relatif terhadap akar proyek). public/uploads dikecualikan — isinya berubah. */
+/** Folder kode yang dipantau (relatif terhadap akar proyek; 'public' = document root, bisa public_html terpisah). */
 const PANTAU = ['app', 'config', 'routes', 'public', 'vendor', 'database/scripts', 'database/migrations'];
-const KECUALI = ['public/uploads/'];
+/** Isinya memang berubah / milik hosting (sertifikat SSL, cgi-bin) — tidak dibandingkan. */
+const KECUALI = ['public/uploads/', 'public/.well-known/', 'public/cgi-bin/'];
 const MANIFEST = 'integritas.json';
 
 /** @return array<string, string> path relatif => sha256 */
@@ -25,7 +26,7 @@ function hitung_hash(): array
 {
     $hasil = [];
     foreach (PANTAU as $akar) {
-        $dir = base_path($akar);
+        $dir = $akar === 'public' ? public_path() : base_path($akar);
         if (!is_dir($dir)) {
             continue;
         }
@@ -34,7 +35,7 @@ function hitung_hash(): array
             if (!$file->isFile()) {
                 continue;
             }
-            $rel = substr($file->getPathname(), strlen(base_path()) + 1);
+            $rel = $akar . substr($file->getPathname(), strlen($dir));
             foreach (KECUALI as $k) {
                 if (str_starts_with($rel, $k)) {
                     continue 2;
@@ -77,8 +78,7 @@ if (!is_array($manifest) || !is_array($manifest['file'] ?? null)) {
 
 // 2. Folder unggahan hanya boleh berisi gambar/PDF/SVG bawaan — tidak boleh ada skrip
 $bolehEkstensi = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'pdf'];
-foreach (['public/uploads', 'storage/bukti'] as $akar) {
-    $dir = base_path($akar);
+foreach (['public/uploads' => public_path('uploads'), 'storage/bukti' => base_path('storage/bukti')] as $akar => $dir) {
     if (!is_dir($dir)) {
         continue;
     }
@@ -87,7 +87,7 @@ foreach (['public/uploads', 'storage/bukti'] as $akar) {
         if (!$file->isFile()) {
             continue;
         }
-        $rel = substr($file->getPathname(), strlen(base_path()) + 1);
+        $rel = $akar . substr($file->getPathname(), strlen($dir));
         $nama = $file->getFilename();
         if ($rel === 'public/uploads/.htaccess' || $nama === '.gitkeep') {
             continue;

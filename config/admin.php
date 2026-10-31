@@ -6,10 +6,12 @@ declare(strict_types=1);
  * Definisi konten yang dikelola panel admin (CRUD generik — App\Controllers\Admin\ResourceController).
  * Nama tabel/kolom & SQL di sini adalah konfigurasi tepercaya (bukan input pengguna).
  *
- * Tipe field: teks, panjang (textarea), html (editor + HtmlSanitizer), angka, tanggal, pilihan,
+ * Tipe field: teks, panjang (textarea), html (editor + HtmlSanitizer), angka, rupiah (diketik 1.500.000), tanggal, pilihan,
  *             publish (Y/N), centang (1/0), slug (otomatis dari 'dari'), gambar (+ varian WebP), pdf.
  * 'pilihan'  : array nilai => label, atau 'sumber' = SQL "SELECT nilai, label …".
- * 'kolom'    : kolom di daftar => tipe tampilan (teks|gambar|publish|tanggal|pilihan|centang).
+ * 'boleh_kosong' (angka): kosong disimpan NULL, bukan 0. 'geser' (angka): [min, maks, langkah, awal] → penggeser %.
+ * Tipe 'warna': pemilih warna #rrggbb + centang "pakai warna bawaan" (NULL); 'pratinjau' => ['opasitas' => field, 'ikon' => [field, folder]].
+ * 'kolom'    : kolom di daftar => tipe tampilan (teks|gambar|publish|tanggal|pilihan|centang|rupiah).
  * 'cache'    : kunci cache yang dihapus setelah simpan/hapus (home, site, zakat, sitemap).
  * 'aksi'     : default ['tambah', 'ubah', 'hapus'].
  * 'hook'     : kelas App\Admin\Hook untuk aturan khusus.
@@ -24,11 +26,18 @@ $polaTautan = 'regex:#^(/(?!/)|https?://|mailto:|tel:)#i';
 return [
     'menu' => [
         'Zakat'     => ['pembayaran' => 'Pembayaran', 'rekening' => 'Rekening', 'zakat' => 'Penjelasan Zakat', 'layanan' => 'Layanan Beranda'],
+        'Penyaluran' => ['distribusi' => 'Distribusi'],
         'Konten'    => ['post' => 'Kabar & Kegiatan', 'banner' => 'Banner', 'video' => 'Video', 'galeri' => 'Galeri', 'testimoni' => 'Testimoni', 'mitra' => 'Mitra'],
         'Program'   => ['pilar' => '5 Pilar', 'sub-program' => 'Sub-program'],
         'Informasi' => ['halaman' => 'Halaman', 'regulasi' => 'Regulasi', 'kategori-regulasi' => 'Kategori Regulasi', 'laporan' => 'Laporan Keuangan', 'amil' => 'Amil'],
-        'Sistem'    => ['tautan-rusak' => 'Tautan Rusak', 'redirect' => 'Pengalihan URL', 'setting' => 'Pengaturan', 'status' => 'Status Sistem', 'akun' => 'Akun Saya'],
+        // Tautan Rusak (/admin/tautan-rusak) & Status Sistem (/admin/status) sengaja tidak di menu — buka lewat alamatnya
+        'Tampilan'  => ['ikon-navigasi' => 'Ikon Navigasi'],
+        'Sistem'    => ['pengguna' => 'Pengguna', 'redirect' => 'Pengalihan URL', 'setting' => 'Pengaturan', 'akun' => 'Akun Saya'],
     ],
+    // Menu yang hanya tampil (dan hanya bisa dibuka) oleh Administrator (user.level = 1)
+    'khusus_administrator' => ['pengguna'],
+    // Peran Kepala (user.level = 3): hanya Dasbor + menu berikut; alamat /admin lainnya ditolak (AuthAdmin)
+    'akses_kepala' => ['akun'],
 
     'resource' => [
         'post' => [
@@ -89,15 +98,64 @@ return [
         'pilar' => [
             'judul' => '5 Pilar Program', 'tunggal' => 'pilar', 'tabel' => 'kategori_program', 'pk' => 'id_kategori_program',
             'urut' => 'urutan, id_kategori_program', 'cari' => ['label'], 'aksi' => ['ubah'],
-            'kolom' => ['label' => 'teks', 'kategori_program' => 'teks', 'slug' => 'teks', 'urutan' => 'teks'],
+            'kolom' => ['ikon' => 'gambar', 'label' => 'teks', 'kategori_program' => 'teks', 'slug' => 'teks', 'urutan' => 'teks'],
             'tautan' => '/program/{slug}',
             'field' => [
                 'label'            => ['tipe' => 'teks', 'label' => 'Nama pilar', 'aturan' => 'required|max:100', 'hint' => 'Mis. Basel Sehat.'],
                 'kategori_program' => ['tipe' => 'teks', 'label' => 'Bidang', 'aturan' => 'required|max:100', 'hint' => 'Mis. Kesehatan.'],
                 'deskripsi'        => ['tipe' => 'panjang', 'label' => 'Deskripsi singkat', 'aturan' => 'nullable|max:255'],
+                'ikon'             => ['tipe' => 'gambar', 'label' => 'Ikon (opsional)', 'folder' => 'pilar',
+                                       'hint' => 'PNG atau WebP berlatar transparan, persegi, minimal 256 × 256 px. Kosongkan untuk memakai ikon bawaan.'],
+                'warna_latar'      => ['tipe' => 'warna', 'label' => 'Warna kotak ikon', 'aturan' => ['nullable', 'regex:/^#[0-9a-f]{6}$/i'],
+                                       'pratinjau' => ['opasitas' => 'opasitas_latar', 'ikon' => ['ikon', 'pilar']],
+                                       'hint' => 'Latar kotak bersudut bulat di belakang ikon (beranda & halaman Program). Bawaan: hijau muda (ikon unggahan) / hijau BAZNAS (ikon bawaan).'],
+                'opasitas_latar'   => ['tipe' => 'angka', 'label' => 'Kepekatan warna kotak', 'aturan' => 'nullable|integer|between:0,100', 'boleh_kosong' => true,
+                                       'geser' => [0, 100, 5, 100], 'hint' => '0% = transparan penuh, 100% = warna penuh. Mis. 15% untuk latar lembut di belakang ikon berwarna.'],
                 'urutan'           => $urutan,
             ],
             'cache' => ['site', 'home', 'sitemap'],
+        ],
+
+        // Penyaluran dana ke sub-program; pilar ikut dari sub-program. Statistiknya di dasbor (StatistikDistribusiService).
+        'distribusi' => [
+            'judul' => 'Distribusi', 'tunggal' => 'distribusi', 'tabel' => 'distribusi', 'pk' => 'id',
+            'urut' => 'tgl DESC, id DESC', 'cari' => ['nama_program', 'lokasi', 'kecamatan'],
+            'keterangan' => 'Catatan penyaluran dana ke sub-program pilar BAZNAS. Total & grafiknya tampil di Dasbor (juga untuk akun Kepala). Data ini tidak tampil di situs publik.',
+            'kolom' => ['tgl' => 'tanggal', 'nama_program' => 'teks', 'id_sub_program' => 'pilihan', 'nominal' => 'rupiah', 'sumber_dana' => 'pilihan', 'penerima' => 'teks'],
+            'field' => [
+                'tgl'            => ['tipe' => 'tanggal', 'label' => 'Tanggal penyaluran', 'aturan' => 'required|date|before_or_equal:today'],
+                'id_sub_program' => ['tipe' => 'pilihan', 'label' => 'Pilar — sub-program', 'aturan' => 'required', 'kosong' => 'Pilih sub-program…',
+                                     'sumber' => "SELECT s.id_sub_program, CONCAT(k.label, ' — ', s.sub_program) FROM sub_program s JOIN kategori_program k ON k.id_kategori_program = s.id_kategori_program ORDER BY k.urutan, s.id_sub_program",
+                                     'hint' => 'Pilar otomatis mengikuti sub-program. Sub-program dikelola di menu Program → Sub-program.'],
+                'nama_program'   => ['tipe' => 'teks', 'label' => 'Nama program / kegiatan', 'aturan' => 'required|min:5|max:200', 'hint' => 'Mis. Bantuan biaya berobat warga Kec. Toboali.'],
+                'nominal'        => ['tipe' => 'rupiah', 'label' => 'Nominal disalurkan', 'aturan' => 'required|integer|between:1,999999999999'],
+                'sumber_dana'    => ['tipe' => 'pilihan', 'label' => 'Sumber dana', 'aturan' => 'required', 'pilihan' => App\Models\Distribusi::SUMBER, 'bawaan' => 'zakat'],
+                'asnaf'          => ['tipe' => 'pilihan', 'label' => 'Asnaf penerima', 'pilihan' => App\Models\Distribusi::ASNAF, 'kosong' => '— Tidak ada / bukan dana zakat —',
+                                     'hint' => 'Wajib bila sumber dana zakat.'],
+                'sifat'          => ['tipe' => 'pilihan', 'label' => 'Sifat penyaluran', 'aturan' => 'required', 'pilihan' => App\Models\Distribusi::SIFAT, 'bawaan' => 'konsumtif',
+                                     'hint' => 'Konsumtif = bantuan langsung habis pakai; produktif = modal usaha/pemberdayaan.'],
+                'penerima'       => ['tipe' => 'angka', 'label' => 'Jumlah penerima manfaat (jiwa)', 'aturan' => 'nullable|integer|between:0,1000000', 'boleh_kosong' => true],
+                'kecamatan'      => ['tipe' => 'pilihan', 'label' => 'Kecamatan', 'pilihan' => App\Models\Distribusi::KECAMATAN, 'kosong' => '— Pilih kecamatan —'],
+                'lokasi'         => ['tipe' => 'teks', 'label' => 'Desa / lokasi rinci', 'aturan' => 'nullable|max:150'],
+                'keterangan'     => ['tipe' => 'panjang', 'label' => 'Keterangan', 'aturan' => 'nullable|max:2000'],
+                'petugas'        => ['tipe' => 'teks', 'label' => 'Petugas pencatat', 'aturan' => 'nullable|max:100', 'bawaan' => 'nama_admin'],
+            ],
+            'hook'  => App\Admin\DistribusiHook::class,
+            'cache' => [],
+        ],
+
+        // 5 item bottom navigation (HP): kunci & urutan tetap (config/menu.php), admin hanya mengganti label & gambar ikon
+        'ikon-navigasi' => [
+            'judul' => 'Ikon Navigasi Bawah', 'tunggal' => 'ikon navigasi', 'tabel' => 'ikon_nav', 'pk' => 'id',
+            'urut' => 'urutan, id', 'aksi' => ['ubah'],
+            'keterangan' => 'Lima tombol di bilah bawah layar HP. Unggah gambar untuk mengganti ikon; kosongkan (centang "Hapus file ini") untuk kembali ke ikon bawaan. Ikon yang tidak aktif otomatis tampil keabu-abuan, berwarna saat halamannya dibuka.',
+            'kolom' => ['ikon' => 'gambar', 'label' => 'teks', 'kunci' => 'teks'],
+            'field' => [
+                'label' => ['tipe' => 'teks', 'label' => 'Label', 'aturan' => 'required|max:14', 'hint' => 'Maksimal 14 huruf agar muat di layar HP, mis. "Bayar Zakat".'],
+                'ikon'  => ['tipe' => 'gambar', 'label' => 'Gambar ikon (opsional)', 'folder' => 'ikon-nav',
+                            'hint' => 'PNG atau WebP berlatar transparan, persegi, minimal 120 × 120 px. Kosong = ikon bawaan.'],
+            ],
+            'cache' => ['site'],
         ],
 
         'sub-program' => [
@@ -160,11 +218,15 @@ return [
 
         'testimoni' => [
             'judul' => 'Testimoni', 'tunggal' => 'testimoni', 'tabel' => 'testimoni', 'pk' => 'id',
-            'urut' => 'urutan, created_at DESC', 'cari' => ['nama', 'isi'],
-            'kolom' => ['foto' => 'gambar', 'nama' => 'teks', 'profesi' => 'teks', 'rating' => 'teks', 'publish' => 'publish'],
+            // Draf (kiriman pengunjung yang belum dimoderasi) di atas
+            'urut' => "publish = 'Y', urutan, created_at DESC", 'cari' => ['nama', 'isi', 'profesi'],
+            'keterangan' => 'Testimoni kiriman pengunjung (form "Bagikan pengalaman Anda" di beranda) masuk sebagai Draf dan berada paling atas. Periksa isinya, lalu Ubah → centang "Tampilkan di situs". Nomor WhatsApp pengirim hanya untuk verifikasi — tidak ditampilkan.',
+            'kolom' => ['foto' => 'gambar', 'nama' => 'teks', 'peran' => 'pilihan', 'profesi' => 'teks', 'rating' => 'teks', 'sumber' => 'teks', 'publish' => 'publish'],
             'field' => [
                 'nama'    => ['tipe' => 'teks', 'label' => 'Nama', 'aturan' => 'required|max:100'],
-                'profesi' => ['tipe' => 'teks', 'label' => 'Keterangan', 'aturan' => 'nullable|max:100', 'hint' => 'Mis. Muzaki, ASN · Penerima modal usaha.'],
+                'peran'   => ['tipe' => 'pilihan', 'label' => 'Sebagai', 'pilihan' => App\Models\Testimoni::PERAN, 'kosong' => '— Tidak disebut —'],
+                'profesi' => ['tipe' => 'teks', 'label' => 'Keterangan', 'aturan' => 'nullable|max:100', 'hint' => 'Mis. ASN, Toboali · Penerima modal usaha.'],
+                'no_hp'   => ['tipe' => 'teks', 'label' => 'WhatsApp pengirim', 'aturan' => 'nullable|max:20', 'hint' => 'Hanya untuk verifikasi admin, tidak ditampilkan di situs.'],
                 'isi'     => ['tipe' => 'panjang', 'label' => 'Testimoni', 'aturan' => 'required|max:1000'],
                 'foto'    => ['tipe' => 'gambar', 'label' => 'Foto (opsional)', 'folder' => 'testimoni', 'hint' => 'Pastikan ada izin dari yang bersangkutan.'],
                 'rating'  => ['tipe' => 'pilihan', 'label' => 'Rating', 'aturan' => 'required', 'pilihan' => ['5' => '5 bintang', '4' => '4 bintang', '3' => '3 bintang', '2' => '2 bintang', '1' => '1 bintang']],

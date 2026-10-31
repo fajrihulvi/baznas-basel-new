@@ -12,10 +12,17 @@ namespace App\Core;
 final class Auth
 {
     public const BATAS_DIAM = 1800;
+    /**
+     * Level `user.level`: 1 = Administrator (semua + kelola pengguna), 3 = Kepala (hanya melihat dasbor),
+     * selain itu = Operator (semua kecuali kelola pengguna).
+     */
+    public const ADMINISTRATOR = 1;
+    public const OPERATOR = 2;
+    public const KEPALA = 3;
     private const MAKS_PERCOBAAN = 5;
     private const JENDELA_PERCOBAAN = 900;
 
-    /** @return array{id: int, username: string, nama: string}|null */
+    /** @return array{id: int, username: string, nama: string, level: int}|null */
     public static function user(): ?array
     {
         $user = Session::get('admin');
@@ -23,10 +30,25 @@ final class Auth
         return is_array($user) ? $user : null;
     }
 
-    /** Masih login & belum diam lebih dari 30 menit; sekaligus memperbarui waktu aktivitas. */
+    public static function administrator(): bool
+    {
+        return (int) (self::user()['level'] ?? 0) === self::ADMINISTRATOR;
+    }
+
+    /** Kepala: hanya-baca, hanya halaman di config admin.akses_kepala (lihat AuthAdmin). */
+    public static function kepala(): bool
+    {
+        return (int) (self::user()['level'] ?? 0) === self::KEPALA;
+    }
+
+    /**
+     * Masih login, belum diam lebih dari 30 menit, dan akunnya masih sah di database
+     * (ada, aktif, password tidak diganti orang lain). Sekaligus memperbarui waktu aktivitas & nama/peran di sesi.
+     */
     public static function aktif(): bool
     {
-        if (self::user() === null) {
+        $user = self::user();
+        if ($user === null) {
             return false;
         }
         if (time() - (int) Session::get('admin_aktif', 0) > self::BATAS_DIAM) {
@@ -34,9 +56,23 @@ final class Auth
             Session::flash('alert', ['jenis' => 'info', 'pesan' => 'Sesi berakhir karena tidak aktif selama 30 menit. Silakan masuk kembali.']);
             return false;
         }
+
+        $row = Database::fetch('SELECT username, password, f_name, l_name, level, status FROM user WHERE id_user = ?', [$user['id']]);
+        if ($row === null || $row['status'] === '0' || !hash_equals(self::sidik((string) $row['password']), (string) Session::get('admin_sidik', ''))) {
+            self::keluar();
+            Session::flash('alert', ['jenis' => 'info', 'pesan' => 'Akun Anda diubah atau dinonaktifkan oleh administrator. Silakan masuk kembali.']);
+            return false;
+        }
+        Session::put('admin', self::dataSesi((int) $user['id'], $row));
         Session::put('admin_aktif', time());
 
         return true;
+    }
+
+    /** Setelah mengganti password sendiri: sesi ini tetap sah, sesi lain milik akun yang sama berakhir. */
+    public static function perbaruiSidik(string $hashBaru): void
+    {
+        Session::put('admin_sidik', self::sidik($hashBaru));
     }
 
     /** @return string|null pesan kesalahan, null bila berhasil */
@@ -47,7 +83,7 @@ final class Auth
         }
 
         $row = Database::fetch(
-            'SELECT id_user, username, password, f_name, l_name, status FROM user WHERE username = ?',
+            'SELECT id_user, username, password, f_name, l_name, level, status FROM user WHERE username = ?',
             [$username]
         );
         $hash = (string) ($row['password'] ?? '');
@@ -66,16 +102,14 @@ final class Auth
         }
 
         if (password_needs_rehash($hash, PASSWORD_BCRYPT, ['cost' => 12])) {
-            Database::execute('UPDATE user SET password = ? WHERE id_user = ?', [password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]), $row['id_user']]);
+            $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+            Database::execute('UPDATE user SET password = ? WHERE id_user = ?', [$hash, $row['id_user']]);
         }
 
         Session::regenerate();
         Session::forget('_csrf');
-        Session::put('admin', [
-            'id'       => (int) $row['id_user'],
-            'username' => $row['username'],
-            'nama'     => trim($row['f_name'] . ' ' . ($row['l_name'] ?? '')),
-        ]);
+        Session::put('admin', self::dataSesi((int) $row['id_user'], $row));
+        Session::put('admin_sidik', self::sidik($hash));
         Session::put('admin_aktif', time());
         RateLimiter::bersihkan('login:' . $ip);
         Database::execute('UPDATE user SET last_login = NOW(), last_loginIP = ? WHERE id_user = ?', [$ip, $row['id_user']]);
@@ -87,6 +121,24 @@ final class Auth
     {
         Session::forget('admin');
         Session::forget('admin_aktif');
+        Session::forget('admin_sidik');
         Session::regenerate();
+    }
+
+    /** Sidik jari hash password: berubah bila password diganti → sesi lama otomatis tidak sah. */
+    private static function sidik(string $hash): string
+    {
+        return substr(hash('sha256', $hash), 0, 32);
+    }
+
+    /** @return array{id: int, username: string, nama: string, level: int} */
+    private static function dataSesi(int $id, array $row): array
+    {
+        return [
+            'id'       => $id,
+            'username' => (string) $row['username'],
+            'nama'     => trim($row['f_name'] . ' ' . ($row['l_name'] ?? '')),
+            'level'    => (int) $row['level'],
+        ];
     }
 }

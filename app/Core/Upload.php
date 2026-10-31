@@ -65,7 +65,7 @@ final class Upload
 
         $nama = bin2hex(random_bytes(16)) . '.' . self::GAMBAR[$mime];
         try {
-            $dim = Image::optimize($file['tmp_name'], base_path('public/uploads/' . $folder), $nama);
+            $dim = Image::optimize($file['tmp_name'], public_path('uploads/' . $folder), $nama);
         } catch (RuntimeException) {
             throw new UploadException('Gambar tidak dapat dibaca. Gunakan file JPG, PNG, atau WebP.');
         }
@@ -82,7 +82,7 @@ final class Upload
         }
 
         $nama = bin2hex(random_bytes(16)) . '.pdf';
-        self::pindahkan($file['tmp_name'], base_path('public/uploads/' . $folder . '/' . $nama));
+        self::pindahkan($file['tmp_name'], public_path('uploads/' . $folder . '/' . $nama));
 
         return $nama;
     }
@@ -93,7 +93,7 @@ final class Upload
         if ($nama === null || $nama === '' || basename($nama) !== $nama) {
             return;
         }
-        $dir = base_path('public/uploads/' . $folder . '/');
+        $dir = public_path('uploads/' . $folder . '/');
         foreach ([$nama, ...array_map(static fn (int $w): string => Image::variant($nama, $w), Image::WIDTHS)] as $f) {
             if (is_file($dir . $f)) {
                 unlink($dir . $f);

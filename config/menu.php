@@ -43,11 +43,11 @@ return [
 
     // Bottom navigation (< lg). 'tengah' = tombol Bayar Zakat yang menonjol; url null = buka menu sheet.
     'bawah' => [
-        ['label' => 'Beranda', 'url' => '/', 'ikon' => 'home', 'aktif' => ['/'], 'persis' => true],
-        ['label' => 'Program', 'url' => '/program', 'ikon' => 'grid', 'aktif' => ['/program']],
-        ['label' => 'Bayar Zakat', 'url' => '/bayar-zakat', 'ikon' => 'heart', 'aktif' => ['/bayar-zakat'], 'tengah' => true],
-        ['label' => 'Kabar', 'url' => '/berita', 'ikon' => 'newspaper', 'aktif' => ['/berita']],
-        ['label' => 'Menu', 'url' => null, 'ikon' => 'menu'],
+        ['label' => 'Beranda', 'url' => '/', 'ikon' => 'home', 'svg' => 'beranda', 'aktif' => ['/'], 'persis' => true],
+        ['label' => 'Program', 'url' => '/program', 'ikon' => 'grid', 'svg' => 'program', 'aktif' => ['/program']],
+        ['label' => 'Bayar Zakat', 'url' => '/bayar-zakat', 'ikon' => 'heart', 'svg' => 'bayar-zakat', 'aktif' => ['/bayar-zakat'], 'tengah' => true],
+        ['label' => 'Kabar', 'url' => '/berita', 'ikon' => 'newspaper', 'svg' => 'kabar', 'aktif' => ['/berita']],
+        ['label' => 'Menu', 'url' => null, 'ikon' => 'menu', 'svg' => 'menu'],
     ],
 
     // Isi bottom sheet "Menu"

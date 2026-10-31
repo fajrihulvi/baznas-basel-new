@@ -48,10 +48,10 @@ final class AkunController extends Controller
             return Response::redirect(url('admin/akun'), 303);
         }
 
-        Database::execute('UPDATE user SET password = ?, token = NULL, token_expired = NULL WHERE id_user = ?', [
-            password_hash((string) $in['password_baru'], PASSWORD_BCRYPT, ['cost' => 12]), $user['id'],
-        ]);
+        $hashBaru = password_hash((string) $in['password_baru'], PASSWORD_BCRYPT, ['cost' => 12]);
+        Database::execute('UPDATE user SET password = ?, token = NULL, token_expired = NULL WHERE id_user = ?', [$hashBaru, $user['id']]);
         Session::regenerate();
+        Auth::perbaruiSidik($hashBaru); // sesi ini tetap masuk; sesi di perangkat lain berakhir
         Session::flash('alert', ['jenis' => 'sukses', 'pesan' => 'Password berhasil diganti.']);
 
         return Response::redirect(url('admin/akun'), 303);

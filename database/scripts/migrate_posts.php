@@ -41,7 +41,7 @@ if ($sudahAda > 0 && !opsi('ulang')) {
 }
 
 $sanitizer = new HtmlSanitizer();
-$uploadDir = base_path('public/uploads/post');
+$uploadDir = public_path('uploads/post');
 
 // --- 1. Kumpulkan semua baris lama ---------------------------------------------
 

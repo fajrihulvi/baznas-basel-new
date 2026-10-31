@@ -45,7 +45,7 @@ $stat = ['gambar' => 0, 'dokumen' => 0, 'dilewati' => 0, 'gagal' => 0, 'byte_lam
 $gagal = [];
 
 foreach (FOLDER as $tabel => $folder) {
-    $target = base_path("public/uploads/{$folder}");
+    $target = public_path("uploads/{$folder}");
     foreach (glob("{$sumber}/{$tabel}/*") ?: [] as $file) {
         $nama = basename($file);
         $ext  = strtolower(pathinfo($nama, PATHINFO_EXTENSION));

@@ -17,6 +17,10 @@ $this->layout('site', [
 ]) ?>
 
 <div class="mx-auto max-w-6xl px-4 py-8 lg:py-12">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface p-4">
+        <p class="text-sm text-ink">Muzaki atau mustahik? Bagikan pengalaman Anda bersama BAZNAS Bangka Selatan.</p>
+        <?= $this->insert('components/button', ['label' => 'Tulis testimoni', 'href' => '/testimoni/kirim', 'size' => 'sm', 'icon' => 'send']) ?>
+    </div>
     <?php if ($testimoni === []): ?>
     <?= $this->insert('components/empty-state', ['judul' => 'Belum ada testimoni', 'pesan' => 'Cerita dari muzaki dan mustahik akan tampil di sini.', 'ikon' => 'star', 'aksi' => ['label' => 'Baca kisah penyaluran', 'href' => '/berita?jenis=berkah_zakat']]) ?>
     <?php else: ?>

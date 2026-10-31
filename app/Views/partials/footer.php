@@ -9,6 +9,12 @@ $telepon   = setting('telepon');
 $email     = setting('email');
 $mapsUrl   = setting('maps_url');
 $jam       = setting('jam_layanan');
+// Peta tersemat dari koordinat Pengaturan (hanya bila angka valid); iframe lazy → tidak dimuat sebelum footer mendekat
+$lat = filter_var(setting('maps_lat'), FILTER_VALIDATE_FLOAT);
+$lng = filter_var(setting('maps_lng'), FILTER_VALIDATE_FLOAT);
+$petaEmbed = $lat !== false && $lng !== false && abs($lat) <= 90 && abs($lng) <= 180
+    ? 'https://www.google.com/maps?' . http_build_query(['q' => $lat . ',' . $lng, 'z' => 16, 'hl' => 'id', 'output' => 'embed'])
+    : null;
 
 $tautan = [];
 foreach (SiteService::halaman('ketentuan') as $h) {
@@ -35,15 +41,10 @@ $rekening = array_slice(SiteService::rekening(), 0, 3);
 <footer id="kontak" class="on-dark scroll-mt-16 bg-primary-dark text-white">
     <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:py-16">
         <section aria-labelledby="footer-kontak">
-            <div class="flex items-center gap-3">
-                <span class="grid size-14 shrink-0 place-items-center rounded-2xl bg-white">
-                    <picture>
-                        <source srcset="<?= e(asset('img/logo-garuda.webp')) ?>" type="image/webp">
-                        <img src="<?= e(asset('img/logo-garuda.png')) ?>" alt="" width="81" height="96" loading="lazy" class="h-10 w-auto">
-                    </picture>
-                </span>
-                <h2 id="footer-kontak" class="font-bold leading-snug"><?= e($namaSitus) ?></h2>
-            </div>
+            <?php /* Logo bertulisan hijau tua → di atas kotak putih (footer berlatar hijau tua) */ ?>
+            <h2 id="footer-kontak" class="inline-block rounded-2xl bg-white px-4 py-3">
+                <?= $this->insert('partials/logo', ['class' => 'h-20 w-auto', 'sizes' => '116px', 'lazy' => true]) ?>
+            </h2>
             <ul class="mt-5 space-y-3 text-sm text-white/85">
                 <?php if ($alamat = setting('alamat')): ?>
                 <li class="flex gap-3"><?= icon('map-pin', 'mt-0.5 size-5 shrink-0 text-accent') ?><span><?= e($alamat) ?></span></li>
@@ -86,6 +87,12 @@ $rekening = array_slice(SiteService::rekening(), 0, 3);
 
         <section aria-labelledby="footer-lokasi">
             <h2 id="footer-lokasi" class="text-sm font-bold uppercase tracking-wide text-accent">Lokasi &amp; Media Sosial</h2>
+            <?php if ($petaEmbed !== null): ?>
+            <div class="mt-4 aspect-[4/3] overflow-hidden rounded-2xl bg-white/10">
+                <iframe src="<?= e($petaEmbed) ?>" title="Peta lokasi kantor <?= e($namaSitus) ?> di Google Maps" loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen class="size-full border-0"></iframe>
+            </div>
+            <?php endif ?>
             <?php if ($mapsUrl): ?>
             <a href="<?= e($mapsUrl) ?>" target="_blank" rel="noopener"
                class="mt-4 flex items-center gap-3 rounded-2xl bg-white/10 p-4 text-sm hover:bg-white/15">

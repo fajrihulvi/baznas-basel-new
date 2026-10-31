@@ -6,6 +6,7 @@ use App\Controllers\Admin\AkunController;
 use App\Controllers\Admin\AuthController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\PembayaranController;
+use App\Controllers\Admin\PenggunaController;
 use App\Controllers\Admin\ResourceController;
 use App\Controllers\Admin\SettingController;
 use App\Controllers\Admin\StatusController;
@@ -31,6 +32,14 @@ $router->group('admin', [AuthAdmin::class], static function (Router $r): void {
     $r->get('/setting', [SettingController::class, 'edit']);
     $r->post('/setting', [SettingController::class, 'update']);
     $r->get('/status', [StatusController::class, 'index']);
+
+    // Kelola pengguna (khusus Administrator — dicek di controller)
+    $r->get('/pengguna', [PenggunaController::class, 'index']);
+    $r->get('/pengguna/baru', [PenggunaController::class, 'create']);
+    $r->post('/pengguna', [PenggunaController::class, 'store']);
+    $r->get('/pengguna/{id}/ubah', [PenggunaController::class, 'edit']);
+    $r->post('/pengguna/{id}', [PenggunaController::class, 'update']);
+    $r->post('/pengguna/{id}/hapus', [PenggunaController::class, 'destroy']);
     $r->get('/akun', [AkunController::class, 'edit']);
     $r->post('/akun', [AkunController::class, 'update']);
 

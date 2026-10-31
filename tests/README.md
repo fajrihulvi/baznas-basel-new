@@ -21,6 +21,10 @@ php tests/http/uji_route.php  http://localhost:8002       # semua halaman publik
 php tests/http/uji_bayar.php  http://localhost:8002       # bayar zakat, konfirmasi, unggahan berbahaya, kalkulator
 php tests/http/uji_admin.php  http://localhost:8002       # login, CRUD semua konten, pembayaran, pengaturan
 php tests/http/uji_fase8.php  http://localhost:8002 http://localhost:8003   # tautan rusak, pengalihan, status, HTTPS/HSTS
+php tests/http/uji_pengguna.php http://localhost:8002     # menu Pengguna: peran, validasi, sesi berakhir saat akun diubah
+php tests/http/uji_distribusi.php http://localhost:8002   # menu Distribusi: CRUD, validasi, statistik dasbor, akses Kepala
+php tests/http/uji_testimoni.php http://localhost:8002    # form testimoni pengunjung: validasi, anti-spam, moderasi admin
+php tests/http/uji_tampilan.php http://localhost:8002     # warna kotak ikon pilar & Ikon Navigasi bawah
 ```
 Setiap skrip diakhiri `SEMUA LULUS` atau daftar `GAGAL`. Berkas sementara di `tests/tmp/` (diabaikan git).
 

@@ -15,6 +15,18 @@ function base_path(string $path = ''): string
     return BASE_PATH . ($path !== '' ? '/' . ltrim($path, '/') : '');
 }
 
+/**
+ * Folder yang dibuka web (document root): proyek/public, atau public_html bila dipisah di hosting.
+ * Web: PUBLIC_PATH dari public/index.php. Skrip CLI: PUBLIC_PATH di .env (hanya untuk susunan terpisah).
+ */
+function public_path(string $path = ''): string
+{
+    static $akar = null;
+    $akar ??= rtrim(defined('PUBLIC_PATH') ? PUBLIC_PATH : (string) (env('PUBLIC_PATH') ?: BASE_PATH . '/public'), '/');
+
+    return $akar . ($path !== '' ? '/' . ltrim($path, '/') : '');
+}
+
 function env(string $key, mixed $default = null): mixed
 {
     return Env::get($key, $default);
@@ -61,7 +73,7 @@ function url(string $path = '', array $query = []): string
 function asset(string $path): string
 {
     $path = ltrim($path, '/');
-    $file = base_path('public/assets/' . $path);
+    $file = public_path('assets/' . $path);
 
     return url('assets/' . $path) . (is_file($file) ? '?v=' . filemtime($file) : '');
 }
@@ -88,6 +100,21 @@ function old(string $key, string $default = ''): string
 function format_rupiah(int|float|string|null $amount): string
 {
     return 'Rp' . number_format((float) $amount, 0, ',', '.');
+}
+
+/** Rupiah ringkas untuk sumbu grafik/kartu: 850000 → "Rp850 rb", 1500000 → "Rp1,5 jt", 2300000000 → "Rp2,3 M". */
+function rupiah_ringkas(int|float $nilai): string
+{
+    foreach ([1e12 => 'T', 1e9 => 'M', 1e6 => 'jt', 1e3 => 'rb'] as $batas => $satuan) {
+        if (abs($nilai) >= $batas) {
+            $n = $nilai / $batas;
+            $teks = number_format($n, $n < 10 && fmod($n, 1.0) !== 0.0 ? 1 : 0, ',', '.');
+
+            return 'Rp' . preg_replace('/,0$/', '', $teks) . ' ' . $satuan;
+        }
+    }
+
+    return format_rupiah($nilai);
 }
 
 /** "2026-09-07" → "7 September 2026" */
@@ -151,7 +178,7 @@ function img(?string $file, string $folder, string $alt, array $opt = []): strin
     $w = (int) ($opt['width'] ?? 0);
     $h = (int) ($opt['height'] ?? 0);
     if ($w <= 0 || $h <= 0) {
-        [$w, $h] = image_size(base_path('public/' . $dir . $file)) ?? [800, 450];
+        [$w, $h] = image_size(public_path($dir . $file)) ?? [800, 450];
     }
 
     $srcset = img_srcset($file, $folder, $w);
@@ -179,11 +206,16 @@ function img_srcset(string $file, string $folder, int $width): ?string
     $srcset = [];
     foreach (Image::WIDTHS as $w) {
         $variant = Image::variant($file, $w);
-        if (!is_file(base_path('public/' . $dir . $variant))) {
+        if (!is_file(public_path($dir . $variant))) {
             continue;
         }
         $descriptor = min($w, $width);
         $srcset[$descriptor] ??= url($dir . rawurlencode($variant)) . ' ' . $descriptor . 'w';
+    }
+    // Berkas asli (≤ 1600 px) sebagai pilihan terbesar: dipakai browser hanya bila slot lebih lebar dari varian 1200
+    // (mis. banner selebar layar laptop), agar gambar tidak diperbesar & buram.
+    if ($srcset !== [] && $width > max(array_keys($srcset)) && is_file(public_path($dir . $file))) {
+        $srcset[$width] = url($dir . rawurlencode($file)) . ' ' . $width . 'w';
     }
 
     return $srcset === [] ? null : implode(', ', $srcset);
@@ -218,7 +250,7 @@ function ringkas(string $html, int $max = 160): string
 /** Ukuran file di public/ yang mudah dibaca, mis. "1,9 MB"; null bila file tidak ada. */
 function ukuran_file(string $pathPublik): ?string
 {
-    $file = base_path('public/' . ltrim($pathPublik, '/'));
+    $file = public_path(ltrim($pathPublik, '/'));
     if (!is_file($file)) {
         return null;
     }

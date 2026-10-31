@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $base = rtrim($argv[1] ?? 'http://localhost:8002', '/');
 $proyek = dirname(__DIR__, 2);
+require $proyek . '/vendor/autoload.php'; // config/admin.php memakai konstanta kelas (mis. App\Models\Distribusi)
 $tmp = dirname(__DIR__) . '/tmp';
 @mkdir($tmp);
 $pdo = new PDO('mysql:host=127.0.0.1;dbname=baznas_basel;charset=utf8mb4', 'root', '', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);

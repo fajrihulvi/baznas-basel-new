@@ -53,9 +53,9 @@ Diperiksa, tidak perlu perubahan: semua query memakai parameter PDO (nama tabel/
 |---|---|
 | **HTTPS & host kanonik** | `APP_FORCE_HTTPS=true`: `http://` dan `www.` → 301 ke APP_URL (query ikut); POST lewat http ditolak 403 |
 | **HSTS** | `APP_HSTS=31536000` (hanya dikirim lewat HTTPS); nyalakan setelah HTTPS stabil |
-| **Tautan Rusak (404)** | Setiap 404 dari pengunjung dicatat (alamat, jumlah, asal tautan, terakhir) — tanpa probe pemindai (`.php`, `.env`, `wp-…`), tanpa `/admin`, maks. 2.000 baris. Admin → *Tautan Rusak* → **Buat pengalihan** |
+| **Tautan Rusak (404)** | Setiap 404 dari pengunjung dicatat (alamat, jumlah, asal tautan, terakhir) — tanpa probe pemindai (`.php`, `.env`, `wp-…`), tanpa `/admin`, maks. 2.000 baris. `/admin/tautan-rusak` (tidak di menu) → **Buat pengalihan** |
 | **Pengalihan URL** | Admin → *Pengalihan URL*: CRUD tabel `redirect`; alamat lama boleh ditempel lengkap (`https://baznasbasel.id/…?x`) → dinormalkan; tolak duplikat, `/admin`, tujuan = asal, tujuan `javascript:`; catatan 404 terkait otomatis hilang |
-| **Status Sistem** | Admin → *Status Sistem*: mode & debug, HTTPS/HSTS, versi PHP, ekstensi, WebP, OPcache, batas unggah, memory, `display_errors`, folder bisa ditulis, blokir PHP di uploads, ruang disk, versi DB, migrasi tertunda, jumlah error 7 hari, tautan rusak |
+| **Status Sistem** | `/admin/status` (tidak di menu): mode & debug, HTTPS/HSTS, versi PHP, ekstensi, WebP, OPcache, batas unggah, memory, `display_errors`, folder bisa ditulis, blokir PHP di uploads, ruang disk, versi DB, migrasi tertunda, jumlah error 7 hari, tautan rusak |
 | `database/scripts/rawat.php` | Cron harian: hapus cache/penghitung/`.tmp` kedaluwarsa, log > 90 hari, catatan 404 > 180 hari (`--coba` = tampilkan saja) |
 | `database/scripts/cek_integritas.php` | Cron harian: bandingkan hash kode dengan `integritas.json` paket rilis (BERUBAH/HILANG/BARU) + pindai uploads & bukti untuk skrip; diam bila bersih (email cron hanya saat ada temuan) |
 | `build-rilis.sh` | Zip rilis (kode + vendor + CSS minified + `integritas.json`), `--uploads` untuk zip gambar; batal bila ada `.env`/`.sql`/log |

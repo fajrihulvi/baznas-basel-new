@@ -36,7 +36,7 @@ final class RedirectService
         if (preg_match('#^/file/([a-z_]+)/([^/]+)$#', $path, $m) && isset(self::FOLDER_LAMA[$m[1]])) {
             $baru = 'uploads/' . self::FOLDER_LAMA[$m[1]] . '/' . basename($m[2]);
 
-            return is_file(base_path('public/' . $baru)) ? self::ke('/' . $baru) : null;
+            return is_file(public_path($baru)) ? self::ke('/' . $baru) : null;
         }
 
         $baris = Redirect::cari($path);

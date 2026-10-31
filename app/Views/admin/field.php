@@ -81,10 +81,47 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
            class="block w-full rounded-xl border border-dashed border-gray-300 bg-surface p-3 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:font-semibold file:text-white">
     <p class="mt-1.5 text-xs text-muted"><?= $f['tipe'] === 'gambar' ? 'JPG, PNG, atau WebP, maks ' . number_format(batas_unggah(ResourceController::MAKS_GAMBAR) / 1048576, 1, ',', '.') . ' MB. Ukuran & varian WebP dibuat otomatis.' : 'PDF, maks ' . number_format(batas_unggah(ResourceController::MAKS_PDF) / 1048576, 1, ',', '.') . ' MB.' ?></p>
 
+    <?php elseif ($f['tipe'] === 'warna'): ?>
+    <?php
+    // Pemilih warna (#rrggbb) + centang "pakai warna bawaan" (input color selalu berisi nilai, jadi kosong = centang ini)
+    $pakaiBawaan = $adaLama ? !empty($lama['bawaan_' . $nama]) : $nilai === '';
+    $p = $f['pratinjau'] ?? null; // ['opasitas' => field angka pasangan, 'ikon' => [field gambar, folder]]
+    ?>
+    <div class="flex flex-wrap items-center gap-4">
+        <input type="color" id="<?= e($id) ?>" name="<?= e($nama) ?>" value="<?= e($nilai !== '' ? $nilai : ($f['warna_awal'] ?? '#0b6b3a')) ?>"<?= $aria ?>
+               class="h-12 w-20 cursor-pointer rounded-xl border border-gray-300 bg-white p-1">
+        <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" name="bawaan_<?= e($nama) ?>" value="1" class="size-5 accent-primary"<?= $pakaiBawaan ? ' checked' : '' ?>>
+            Pakai warna bawaan
+        </label>
+        <?php if ($p !== null): ?>
+        <span class="ml-auto flex items-center gap-3 text-sm text-muted">Pratinjau
+            <span class="grid size-18 place-items-center rounded-2xl border border-dashed border-gray-300 bg-primary/10"
+                  data-pratinjau-warna="<?= e($nama) ?>" data-pratinjau-opasitas="<?= e($p['opasitas'] ?? '') ?>">
+                <?php if ($baris !== null && !empty($p['ikon']) && !empty($baris[$p['ikon'][0]])): ?>
+                <?= img($baris[$p['ikon'][0]], $p['ikon'][1], '', ['sizes' => '48px', 'class' => 'size-12 object-contain']) ?>
+                <?php endif ?>
+            </span>
+        </span>
+        <?php endif ?>
+    </div>
+
+    <?php elseif ($f['tipe'] === 'angka' && !empty($f['geser'])): ?>
+    <?php [$min, $maks, $langkah, $awal] = $f['geser'] + [0, 100, 5, 100]; $nilaiGeser = $nilai !== '' ? $nilai : (string) $awal; ?>
+    <div class="flex max-w-md items-center gap-4">
+        <input type="range" id="<?= e($id) ?>" name="<?= e($nama) ?>" min="<?= (int) $min ?>" max="<?= (int) $maks ?>" step="<?= (int) $langkah ?>" value="<?= e($nilaiGeser) ?>"<?= $aria ?>
+               class="h-12 min-w-0 flex-1 cursor-pointer accent-primary">
+        <output for="<?= e($id) ?>" class="w-14 shrink-0 text-right font-semibold text-ink" style="font-variant-numeric: tabular-nums"><?= e($nilaiGeser) ?>%</output>
+    </div>
+
     <?php else: ?>
     <?php
+    if ($f['tipe'] === 'rupiah' && ctype_digit($nilai)) {
+        $nilai = number_format((int) $nilai, 0, ',', '.'); // tampil 1.500.000
+    }
     [$type, $extra] = match ($f['tipe']) {
         'angka'   => ['number', ' inputmode="numeric"'],
+        'rupiah'  => ['text', ' inputmode="numeric" data-rupiah placeholder="Rp" autocomplete="off"'],
         'tanggal' => ['date', ''],
         'slug'    => ['text', ' pattern="[a-z0-9-]*" placeholder="otomatis"'],
         default   => ['text', ''],

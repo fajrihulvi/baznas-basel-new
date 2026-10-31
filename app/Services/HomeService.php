@@ -64,6 +64,6 @@ final class HomeService
     /** @return array{0: int, 1: int}|null */
     private static function ukuran(string $folder, ?string $file): ?array
     {
-        return $file ? image_size(base_path("public/uploads/{$folder}/" . basename($file))) : null;
+        return $file ? image_size(public_path("uploads/{$folder}/" . basename($file))) : null;
     }
 }

@@ -20,13 +20,17 @@ final class Navigation
         ], (array) config('menu.utama', []));
     }
 
-    /** @return list<array{label: string, url: ?string, ikon: string, aktif: bool, tengah: bool}> */
+    /** @return list<array{label: string, url: ?string, ikon: string, svg: ?string, gambar: ?string, aktif: bool, tengah: bool}> */
     public static function bawah(): array
     {
+        $atur = SiteService::ikonNav(); // admin → Ikon Navigasi (label & gambar), per kunci = 'svg'
+
         return array_map(static fn (array $item): array => [
-            'label'  => $item['label'],
+            'label'  => ($atur[$item['svg'] ?? '']['label'] ?? '') ?: $item['label'],
             'url'    => $item['url'],
             'ikon'   => $item['ikon'],
+            'svg'    => $item['svg'] ?? null, // ikon dua warna (app/Views/partials/ikon-nav.php) menggantikan 'ikon'
+            'gambar' => $atur[$item['svg'] ?? '']['ikon'] ?? null, // gambar unggahan (uploads/ikon-nav) menggantikan svg
             'aktif'  => isset($item['aktif']) && self::aktif($item['aktif'], !empty($item['persis'])),
             'tengah' => !empty($item['tengah']),
         ], (array) config('menu.bawah', []));

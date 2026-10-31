@@ -83,6 +83,16 @@ if (preg_match('#href="([^"]+/assets/css/app\.css\?v=\d+)"#', $home['body'], $m)
 } else {
     $cek('tautan app.css ditemukan di beranda', false);
 }
+// Semua aset yang dipakai beranda harus terunggah: asset() hanya menambah ?v= bila berkasnya ada di server,
+// jadi aset tanpa ?v= = berkas belum diunggah (mis. JS baru yang lupa ikut → form gagal dengan 419).
+preg_match_all('#(?:src|href)="([^"]*/assets/[^"]+)"#', $home['body'], $semua);
+$asetHilang = [];
+foreach (array_unique(array_map('html_entity_decode', $semua[1])) as $aset) {
+    if (!str_contains($aset, '?v=') || ambil($aset, 'HEAD')['kode'] !== 200) {
+        $asetHilang[] = basename((string) parse_url($aset, PHP_URL_PATH));
+    }
+}
+$cek('semua CSS/JS/gambar /assets di beranda ada di server (' . count(array_unique($semua[1])) . ' berkas)', $asetHilang === [], implode(', ', $asetHilang));
 if (preg_match('#src="([^"]+/uploads/[^"]+\.webp)"#', $home['body'], $m)) {
     $img = ambil(html_entity_decode($m[1]), 'HEAD');
     $cek('gambar unggahan → 200, image/webp, cache 1 tahun', $img['kode'] === 200 && header_ada($img, 'Content-Type', 'image/webp') && header_ada($img, 'Cache-Control', '.*max-age=31536000'));

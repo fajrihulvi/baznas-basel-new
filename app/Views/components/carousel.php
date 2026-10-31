@@ -9,6 +9,7 @@
  * @var int|null     $autoplay  milidetik (0 = mati). Ada tombol jeda (WCAG 2.2.2)
  * @var int|null     $kolomLg   bila diisi: di ≥ lg tampil sebagai grid N kolom tanpa geser & tanpa kontrol
  * @var string|null  $id
+ * @var string|null  $kontrolClass class tambahan baris kontrol, mis. agar sejajar konten saat carousel selebar layar
  *
  * Track selalu bisa difokus (tabindex=0) agar bisa digeser dengan tombol panah keyboard,
  * termasuk bila slide tidak berisi link (mis. banner tanpa tautan) — WCAG 2.1.1.
@@ -29,7 +30,7 @@ $trackLg = $kolomLg > 0 ? "lg:grid {$gridLg} lg:overflow-visible" : '';
         <?php endforeach ?>
     </ul>
     <?php if (count($slides) > 1): ?>
-    <div class="invisible mt-3 flex items-center justify-between gap-3<?= $kolomLg > 0 ? ' lg:hidden' : '' ?>" data-carousel-controls>
+    <div class="invisible mt-3 flex items-center justify-between gap-3<?= $kolomLg > 0 ? ' lg:hidden' : '' ?><?= !empty($kontrolClass) ? ' ' . e($kontrolClass) : '' ?>" data-carousel-controls>
         <div class="flex flex-wrap items-center" data-carousel-dots></div>
         <div class="flex shrink-0 gap-2">
             <?php if (!empty($autoplay)): ?>

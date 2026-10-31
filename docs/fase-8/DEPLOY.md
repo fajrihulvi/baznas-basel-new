@@ -39,7 +39,7 @@ Perkiraan waktu: 2–3 jam. Pilih jam sepi (mis. malam hari kerja).
    ```
 4. Jalankan pengolahan (variabel `DB_NAME=` di depan perintah mengalahkan isi `.env`, jadi `.env` tidak perlu diubah):
    ```sh
-   DB_NAME=baznas_rilis php database/scripts/migrate.php                     # 001–008
+   DB_NAME=baznas_rilis php database/scripts/migrate.php                     # 001–011
    php database/scripts/generate_image_variants.php --sumber=$HOME/Backups/baznas-basel/uploads-lama-HARIINI
    DB_NAME=baznas_rilis php database/scripts/migrate_posts.php
    DB_NAME=baznas_rilis php database/scripts/reset_admin_password.php        # password admin produksi (min. 8 karakter)
@@ -73,7 +73,15 @@ Perkiraan waktu: 2–3 jam. Pilih jam sepi (mis. malam hari kerja).
    Lalu *Permissions* `.env` → **600**.
 5. **Izin folder**: `storage/cache`, `storage/logs`, `storage/bukti`, `public/uploads` dan subfoldernya → **755** (file di dalamnya 644).
 6. **Arahkan domain ke `public/`** — pilih satu:
-   - **A (disarankan)**: *Domains* → baznasbasel.id → *Manage* → *Document Root* = `baznas-basel/public`.
+   - **Terpisah (disarankan untuk shared hosting, tanpa Terminal)**: kode di luar web, isi `public/` di `public_html`.
+     1. *File Manager → Settings → Show Hidden Files* (agar `.htaccess` ikut terlihat & terpindah).
+     2. Kosongkan `public_html` (pindahkan isi lama ke `/home/USERCPANEL/public_html_lama/`).
+     3. Buka `baznas-basel/public/` → *Select All* (termasuk `.htaccess`) → *Move* ke `/public_html`. Folder `baznas-basel/public` yang kosong dihapus.
+     4. Gambar dari `uploads-WAKTU.zip` diekstrak ke `public_html/` (menjadi `public_html/uploads/…`).
+     5. Di `.env` tambahkan `PUBLIC_PATH=/home/USERCPANEL/public_html` (dipakai skrip cron; halaman web mengenalinya otomatis).
+     6. Nama folder kode **wajib** `baznas-basel` dan sejajar dengan `public_html` — `index.php` mencarinya di sana.
+     Hasil: `/home/USERCPANEL/baznas-basel/{app,config,vendor,storage,.env,…}` + `/home/USERCPANEL/public_html/{index.php,.htaccess,assets,uploads,…}`. Izin 755 di langkah 5 berlaku untuk `public_html/uploads`.
+   - **A**: *Domains* → baznasbasel.id → *Manage* → *Document Root* = `baznas-basel/public` (bila hosting mengizinkan).
    - **B (domain utama yang document root-nya terkunci di `public_html`)**: *File Manager* → ganti nama `public_html` menjadi `public_html_lama`, lalu minta hosting/Terminal membuat tautan: `ln -s /home/USERCPANEL/baznas-basel/public /home/USERCPANEL/public_html`.
    - **C (darurat, tanpa A/B)**: ekstrak isi paket langsung ke `public_html/` (setelah `public_html` lama diganti nama). `.htaccess` di akar paket meneruskan semua ke `public/` dan memblokir file rahasia — sudah diuji di Apache (`.env`, `app/`, `config/`, `vendor/`, `database/` → 404).
 7. Bila memakai B/C, folder lama `file/` tidak lagi di document root — tidak masalah: URL `/file/...` lama otomatis dialihkan ke `/uploads/...`.
@@ -85,7 +93,7 @@ Perkiraan waktu: 2–3 jam. Pilih jam sepi (mis. malam hari kerja).
    php database/scripts/uji_rilis.php https://baznasbasel.id
    ```
    Harus **LULUS — 0 gagal** (memeriksa halaman, header keamanan, gzip & cache, file rahasia, http→https, URL lama, sitemap, robots, admin).
-2. Masuk `https://baznasbasel.id/admin/masuk` → **Status Sistem**: semua "Baik" kecuali HSTS (dinyalakan nanti).
+2. Masuk `https://baznasbasel.id/admin/masuk` → buka `/admin/status` (**Status Sistem**, tidak ada di menu): semua "Baik" kecuali HSTS (dinyalakan nanti).
 3. Uji alur zakat sungguhan: *Bayar Zakat* → isi data uji (nama "UJI") → halaman instruksi → *Konfirmasi* dengan gambar kecil → di admin *Pembayaran*: bukti tampil → **Tolak** → hapus/abaikan transaksi uji.
 4. Buka beberapa URL lama dari Google (mis. `https://baznasbasel.id/home/kabar/berita/detail/…`) → harus pindah ke `/berita/…`.
 5. Cek di HP (data seluler): beranda, menu, carousel, bayar zakat.
@@ -105,20 +113,20 @@ Bila email cek integritas datang dan perubahan bukan dari Anda: ganti password c
 
 1. **HSTS**: `.env` → `APP_HSTS=31536000`. Cek ulang `uji_rilis.php` (baris HSTS jadi OK). Jangan dimatikan lagi setelah aktif: browser mengingatnya 1 tahun.
 2. **Google Search Console** (search.google.com/search-console): tambah properti *Domain* `baznasbasel.id` (verifikasi lewat DNS TXT di cPanel *Zone Editor*) → *Sitemaps* → kirim `https://baznasbasel.id/sitemap.xml`. Pantau *Halaman → Tidak diindeks* dan *Pengalaman halaman*.
-3. **Tautan rusak**: tiap minggu buka admin → **Tautan Rusak**. Alamat yang sering dibuka → **Buat pengalihan** ke halaman yang sesuai.
+3. **Tautan rusak**: tiap minggu buka `/admin/tautan-rusak` (**Tautan Rusak**, tidak ada di menu). Alamat yang sering dibuka → **Buat pengalihan** ke halaman yang sesuai.
 4. Hapus `public_html_lama` & DB `baznasba_baznas` **setelah** yakin (simpan backup-nya dulu).
 
 ## Rollback
 
 Situs lama tetap utuh selama langkah A–D:
-- Kembalikan *Document Root* ke `public_html` (opsi A) atau ganti nama `public_html_lama` → `public_html` (opsi B/C).
+- Kembalikan *Document Root* ke `public_html` (opsi A) atau kembalikan isi `public_html_lama` → `public_html` (opsi Terpisah/B/C).
 - DB lama `baznasba_baznas` tidak disentuh. Pembayaran yang masuk lewat situs baru selama dicoba ada di DB `baznasba_web` — catat sebelum kembali.
 
 ## Memperbarui situs (rilis berikutnya)
 
 1. Lokal: `./build-rilis.sh` → unggah zip ke `/home/USERCPANEL/`, ekstrak menimpa `baznas-basel/` (paket tidak berisi `.env`, gambar unggahan, bukti transfer, atau log — data aman).
 2. Bila ada file baru di `database/migrations/`: jalankan sekali lewat Cron (*Once*) atau Terminal: `php database/scripts/migrate.php`. **Backup DB dulu.**
-3. Hapus `storage/cache/*.cache` (*File Manager*), buka Status Sistem, jalankan `uji_rilis.php`.
+3. Hapus `storage/cache/*.cache` (*File Manager*), buka `/admin/status`, jalankan `uji_rilis.php`.
 4. Simpan `*.integritas.json` rilis baru; cek integritas harian otomatis memakai `integritas.json` dari paket.
 
 ## Catatan untuk penyedia hosting (opsional)

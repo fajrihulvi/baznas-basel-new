@@ -6,13 +6,14 @@ namespace App\Services;
 
 use App\Core\Cache;
 use App\Models\Halaman;
+use App\Models\IkonNav;
 use App\Models\KategoriProgram;
 use App\Models\Rekening;
 use App\Models\Setting;
 
 /**
  * Data yang dibutuhkan layout di setiap halaman (header, menu, footer), diambil sekali lalu di-cache.
- * Panggil SiteService::forget() setelah admin mengubah setting, pilar, rekening, atau halaman.
+ * Panggil SiteService::forget() setelah admin mengubah setting, pilar, rekening, halaman, atau ikon navigasi.
  */
 final class SiteService
 {
@@ -31,6 +32,12 @@ final class SiteService
     public static function pilar(): array
     {
         return self::data()['pilar'];
+    }
+
+    /** Ikon & label bottom navigation dari admin, per kunci. @return array<string, array{label: string, ikon: ?string}> */
+    public static function ikonNav(): array
+    {
+        return self::data()['ikonNav'] ?? [];
     }
 
     public static function rekening(): array
@@ -57,6 +64,7 @@ final class SiteService
             'pilar'    => KategoriProgram::pilar(),
             'rekening' => Rekening::all(),
             'halaman'  => Halaman::terbitPerGrup(),
+            'ikonNav'  => IkonNav::semua(),
         ]);
     }
 }

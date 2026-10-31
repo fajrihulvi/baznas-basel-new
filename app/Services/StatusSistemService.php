@@ -19,7 +19,7 @@ final class StatusSistemService
     private const EKSTENSI = ['pdo_mysql' => 'Database', 'mbstring' => 'Teks UTF-8', 'gd' => 'Olah gambar', 'fileinfo' => 'Cek jenis file unggahan', 'dom' => 'Sanitasi HTML editor'];
 
     /** Folder yang harus bisa ditulis PHP. */
-    private const FOLDER_TULIS = ['storage/cache', 'storage/logs', 'storage/bukti', 'public/uploads'];
+    private const FOLDER_TULIS = ['storage/cache', 'storage/logs', 'storage/bukti']; // + folder uploads di document root
 
     /** @return array<string, list<array{label: string, nilai: string, status: string, saran: ?string}>> */
     public static function periksa(Request $request): array
@@ -88,16 +88,18 @@ final class StatusSistemService
     private static function penyimpanan(): array
     {
         $baris = [];
-        foreach (self::FOLDER_TULIS as $folder) {
-            $bisa = is_dir(base_path($folder)) && is_writable(base_path($folder));
-            $baris[] = self::baris('Folder ' . $folder, $bisa ? 'Bisa ditulis' : 'Tidak bisa ditulis', $bisa ? 'ok' : 'galat', $bisa ? null : 'Buat folder & beri izin tulis (755/775).');
+        $folder = array_combine(self::FOLDER_TULIS, array_map('base_path', self::FOLDER_TULIS)) + ['uploads (document root)' => public_path('uploads')];
+        foreach ($folder as $label => $path) {
+            $bisa = is_dir($path) && is_writable($path);
+            $baris[] = self::baris('Folder ' . $label, $bisa ? 'Bisa ditulis' : 'Tidak bisa ditulis', $bisa ? 'ok' : 'galat', $bisa ? null : 'Buat folder & beri izin tulis (755/775): ' . $path);
         }
-        foreach (glob(base_path('public/uploads/*'), GLOB_ONLYDIR) ?: [] as $dir) {
+        $baris[] = self::baris('Document root', public_path() === base_path('public') ? 'public/ di dalam proyek' : 'Terpisah: ' . public_path(), 'ok', null);
+        foreach (glob(public_path('uploads/*'), GLOB_ONLYDIR) ?: [] as $dir) {
             if (!is_writable($dir)) {
                 $baris[] = self::baris('Folder public/uploads/' . basename($dir), 'Tidak bisa ditulis', 'galat', 'Beri izin tulis (755/775).');
             }
         }
-        $proteksi = is_file(base_path('public/uploads/.htaccess'));
+        $proteksi = is_file(public_path('uploads/.htaccess'));
         $baris[] = self::baris('Blokir PHP di uploads', $proteksi ? 'Ada (.htaccess)' : 'Tidak ada', $proteksi ? 'ok' : 'galat', $proteksi ? null : 'Salin public/uploads/.htaccess dari paket rilis.');
 
         $sisa = @disk_free_space(base_path());
@@ -144,7 +146,7 @@ final class StatusSistemService
         return [
             self::baris('Error 7 hari terakhir', (string) $galat, $galat === 0 ? 'ok' : 'peringatan', $galat === 0 ? null : 'Lihat storage/logs/app-*.log (cPanel → File Manager).'),
             self::baris('Tautan rusak tercatat', $rusak === null ? 'Tabel belum ada' : (string) $rusak, $rusak === null ? 'peringatan' : 'ok',
-                $rusak === null ? 'Jalankan migrasi 008.' : ($rusak > 0 ? 'Tinjau di menu Tautan Rusak.' : null)),
+                $rusak === null ? 'Jalankan migrasi 008.' : ($rusak > 0 ? 'Tinjau di /admin/tautan-rusak.' : null)),
         ];
     }
 

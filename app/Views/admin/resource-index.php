@@ -62,6 +62,8 @@ $kolomUtama = array_search('teks', $r->kolom(), true); // kolom teks pertama dit
                     <?= $nilai ? '<span class="font-semibold text-primary">Ya</span>' : '<span class="text-muted">—</span>' ?>
                     <?php elseif ($tipe === 'tanggal'): ?>
                     <span class="whitespace-nowrap"><?= e(tgl_id($nilai)) ?></span>
+                    <?php elseif ($tipe === 'rupiah'): ?>
+                    <span class="whitespace-nowrap font-semibold text-ink" style="font-variant-numeric: tabular-nums"><?= e(format_rupiah($nilai)) ?></span>
                     <?php elseif ($tipe === 'pilihan'): ?>
                     <?= e($r->pilihan($kolom)[(string) $nilai] ?? (string) $nilai) ?>
                     <?php else: ?>

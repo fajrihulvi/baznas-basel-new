@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Charity hand and money bag with Islamic star and crescent</title>
+  <desc id="desc">Minimal flat vector icon using forest green, emerald green, and golden yellow on a white background.</desc>
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <!-- Hand and sleeve -->
+  <path d="M184 86c-17 0-29 7-39 19l-35 40c-8 9-10 23-4 33l14 21c5 8 15 10 23 5l39-26c10-7 21-9 34-7l49 8c13 2 25-1 36-9l35-25-16-61-26 10c-7 3-15 4-23 3l-57-9c-11-2-21-2-30-2z" fill="#14532D"/>
+  <path d="M329 66l42-15c8-3 17 2 20 10l19 61c2 8-2 16-10 19l-43 14z" fill="#059669"/>
+  <!-- Coin -->
+  <circle cx="173" cy="202" r="31" fill="#FACC15"/>
+  <!-- Money bag opening -->
+  <path d="M118 242c18 8 38 13 58 13s40-5 58-13l-17 37H135z" fill="#059669"/>
+  <rect x="133" y="267" width="87" height="19" rx="9.5" fill="#14532D"/>
+  <!-- Bag body -->
+  <path d="M143 284c-6 18-21 32-37 52-22 28-37 65-37 94 0 28 22 48 51 48h112c29 0 51-20 51-48 0-29-15-66-37-94-16-20-31-34-37-52z" fill="#059669"/>
+  <!-- Eight-point Islamic star emblem -->
+  <path d="M176 322l18 22h27l-2 28 20 20-20 20 2 28h-27l-18 22-18-22h-27l2-28-20-20 20-20-2-28h27z" fill="#FACC15"/>
+  <path d="M176 337l12 15h19l-1 20 14 20-14 14 1 20h-19l-12 15-12-15h-19l1-20-14-14 14-20-1-20h19z" fill="#14532D"/>
+  <!-- Crescent -->
+  <path d="M190 362a27 27 0 1 0 20 45 24 24 0 0 1-20-45z" fill="#FACC15"/>
+</svg>

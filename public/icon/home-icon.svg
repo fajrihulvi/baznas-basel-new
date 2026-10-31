@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Minimal green home icon</title>
+  <desc id="desc">Flat vector house icon in forest green and emerald green on a white background.</desc>
+  <rect width="1024" height="1024" fill="#FFFFFF"/>
+  <!-- Roof and chimney -->
+  <path d="M112 467 L546 113 Q576 88 606 113 L702 191 L702 166 Q702 145 723 145 L800 145 Q821 145 821 166 L821 292 L912 467 Q923 486 907 502 L882 524 Q862 541 842 526 L576 310 L194 526 Q174 541 154 524 L129 502 Q113 486 112 467 Z" fill="#005332"/>
+  <!-- Main house body -->
+  <path d="M210 518 L512 278 Q526 267 540 278 L814 498 L814 850 Q814 886 778 886 L246 886 Q210 886 210 850 Z" fill="#079E61"/>
+  <!-- Doorway -->
+  <path d="M405 886 L405 650 Q405 600 455 600 L569 600 Q619 600 619 650 L619 886 Z" fill="#005332"/>
+</svg>

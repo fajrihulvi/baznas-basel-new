@@ -7,12 +7,25 @@
  * @var list<array> $terbaru
  * @var int         $jumlahKabar
  * @var list<string> $settingKurang
+ * @var array       $statistik  StatistikZakatService::untuk()
+ * @var bool        $kepala     peran Kepala: hanya statistik (variabel lain tidak dikirim)
+ * @var int         $testimoniBaru kiriman testimoni pengunjung yang belum dimoderasi
  */
 
 use App\Controllers\Admin\PembayaranController;
 use App\Core\Auth;
 
 $this->layout('admin', ['title' => 'Dasbor']);
+
+if ($kepala):
+?>
+<h1 class="text-2xl font-bold">Assalamu'alaikum, <?= e(Auth::user()['nama'] ?? '') ?></h1>
+<p class="mt-1 text-muted">Perkembangan zakat masuk BAZNAS Kabupaten Bangka Selatan.</p>
+<?= $this->insert('admin/statistik', ['s' => $statistik]) ?>
+<?php
+    return;
+endif;
+
 $kartu = [
     ['Konfirmasi baru', (string) $konfirmasiBaru, '/admin/pembayaran?konfirmasi=baru', $konfirmasiBaru > 0],
     ['Pembayaran menunggu', (string) $bayar['menunggu'], '/admin/pembayaran?status=0', false],
@@ -31,6 +44,14 @@ $kartu = [
 </div>
 <?php endif ?>
 
+<?php if ($testimoniBaru > 0): ?>
+<div class="mt-6">
+    <?= $this->insert('components/alert', ['jenis' => 'info', 'judul' => $testimoniBaru . ' testimoni baru menunggu moderasi',
+        'pesan' => 'Kiriman muzaki/mustahik dari beranda. Periksa isinya, lalu centang "Tampilkan di situs" bila layak tampil.']) ?>
+    <a href="<?= e(url('admin/testimoni')) ?>" class="mt-2 inline-block text-sm font-semibold text-primary underline">Buka Testimoni</a>
+</div>
+<?php endif ?>
+
 <ul class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     <?php foreach ($kartu as [$label, $nilai, $link, $sorot]): ?>
     <li>
@@ -41,6 +62,8 @@ $kartu = [
     </li>
     <?php endforeach ?>
 </ul>
+
+<?= $this->insert('admin/statistik', ['s' => $statistik]) ?>
 
 <div class="mt-8 grid gap-6 xl:grid-cols-2">
     <section class="rounded-2xl border border-gray-200 bg-white p-5" aria-labelledby="judul-antrean">

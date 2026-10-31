@@ -13,6 +13,7 @@ use App\Controllers\Site\PostController;
 use App\Controllers\Site\ProgramController;
 use App\Controllers\Site\RegulasiController;
 use App\Controllers\Site\SeoController;
+use App\Controllers\Site\TestimoniController;
 use App\Controllers\Site\ZakatController;
 use App\Services\RedirectService;
 
@@ -49,6 +50,9 @@ $router->get('/tentang/{slug}', [PageController::class, 'tentang']);
 $router->get('/halaman/{slug}', [PageController::class, 'halaman']);
 $router->get('/amil', [PageController::class, 'amil']);
 $router->get('/testimoni', [PageController::class, 'testimoni']);
+$router->get('/testimoni/token', [TestimoniController::class, 'token']);
+$router->get('/testimoni/kirim', [TestimoniController::class, 'formulir']);
+$router->post('/testimoni/kirim', [TestimoniController::class, 'kirim']);
 
 $router->get('/cari', [CariController::class, 'index']);
 

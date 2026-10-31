@@ -219,7 +219,27 @@ final class ResourceController extends Controller
                     break;
                 case 'angka':
                     $wajib = in_array('required', (array) (is_string($f['aturan'] ?? null) ? explode('|', $f['aturan']) : ($f['aturan'] ?? [])), true);
-                    $data[$nama] = $nilai === '' || $nilai === null ? ($wajib ? null : 0) : $nilai;
+                    $data[$nama] = $nilai === '' || $nilai === null ? ($wajib || !empty($f['boleh_kosong']) ? null : 0) : $nilai;
+                    break;
+                case 'warna':
+                    // Centang "Pakai warna bawaan" → NULL (input color selalu mengirim nilai)
+                    $data[$nama] = !empty($in['bawaan_' . $nama]) || $nilai === '' || $nilai === null ? null : strtolower($nilai);
+                    break;
+                case 'rupiah':
+                    // "Rp1.500.000" / "1.500.000" → "1500000" (divalidasi sebagai teks angka, lalu jadi int)
+                    $data[$nama] = $nilai === '' || $nilai === null ? null : (string) angka($nilai);
+                    break;
+                case 'bulan':
+                    // Dua pilihan {nama}_bulan + {nama}_tahun (atau "YYYY-MM") → "YYYY-MM-01"; salah format tetap teks → gagal aturan 'date'
+                    $bl = is_scalar($in[$nama . '_bulan'] ?? null) ? (string) $in[$nama . '_bulan'] : '';
+                    $th = is_scalar($in[$nama . '_tahun'] ?? null) ? (string) $in[$nama . '_tahun'] : '';
+                    if ($bl !== '' || $th !== '') {
+                        $nilai = ctype_digit($bl) && ctype_digit($th) ? sprintf('%04d-%02d', (int) $th, (int) $bl) : $th . '-' . $bl;
+                    }
+                    $data[$nama] = $nilai === '' || $nilai === null ? null : (preg_match('/^\d{4}-\d{2}$/', $nilai) ? $nilai . '-01' : $nilai);
+                    break;
+                case 'jumlah':
+                    // Hanya tampilan (total otomatis); nilainya dihitung hook, tidak diambil dari form
                     break;
                 case 'pilihan':
                     $data[$nama] = $nilai === '' ? null : $nilai;
@@ -239,10 +259,13 @@ final class ResourceController extends Controller
         $v = Validator::make(array_map(static fn ($x) => $x === null ? null : (string) $x, $data), $aturan, $label);
 
         foreach ($r->field() as $nama => $f) {
-            if ($f['tipe'] === 'pilihan' && $data[$nama] !== null && !array_key_exists((string) $data[$nama], $r->pilihan($nama))) {
+            if ($f['tipe'] === 'bulan' && $data[$nama] !== null && !$v->fails() && !preg_match('/^\d{4}-\d{2}-01$/', (string) $data[$nama])) {
+                $v->tambah($nama, $f['label'] . ' tidak valid.');
+            }
+            if ($f['tipe'] === 'pilihan' && $data[$nama] !== null &&!array_key_exists((string) $data[$nama], $r->pilihan($nama))) {
                 $v->tambah($nama, 'Pilihan ' . $f['label'] . ' tidak valid.');
             }
-            if ($f['tipe'] === 'angka' && $data[$nama] !== null) {
+            if (in_array($f['tipe'], ['angka', 'rupiah'], true) && $data[$nama] !== null) {
                 $data[$nama] = (int) $data[$nama];
             }
         }

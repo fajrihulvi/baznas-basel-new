@@ -6,12 +6,10 @@
 $this->layout('admin', ['title' => 'Masuk', 'polos' => true]);
 ?>
 <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-    <div class="flex items-center gap-3">
-        <img src="<?= e(asset('img/logo-garuda.webp')) ?>" alt="" width="81" height="96" class="h-12 w-auto">
-        <div>
-            <h1 class="text-xl font-bold text-ink">Admin BAZNAS Basel</h1>
-            <p class="text-sm text-muted">Masuk untuk mengelola situs.</p>
-        </div>
+    <div class="text-center">
+        <?= $this->insert('partials/logo', ['class' => 'mx-auto h-24 w-auto', 'sizes' => '139px']) ?>
+        <h1 class="mt-4 text-xl font-bold text-ink">Masuk Admin</h1>
+        <p class="text-sm text-muted">Masuk untuk mengelola situs.</p>
     </div>
     <form method="post" action="<?= e(url('admin/masuk')) ?>" class="mt-6 space-y-4">
         <?= csrf_field() ?>

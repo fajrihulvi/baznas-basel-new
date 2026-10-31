@@ -21,8 +21,9 @@ $blok      = 'mx-auto max-w-6xl px-4 py-10 lg:py-16';
 
 // --- Hero: rasio mengikuti banner yang ada (±16:7). Rasio 4:3 di HP hanya bila SEMUA banner punya foto_mobile.
 $semuaPunyaMobile = $banner !== [] && count(array_filter($banner, static fn (array $b): bool => !empty($b['foto_mobile']))) === count($banner);
-$rasioHero  = $semuaPunyaMobile ? 'aspect-[4/3] sm:aspect-[16/7]' : 'aspect-[16/7]';
-$sizesHero  = '(min-width: 1184px) 1152px, calc(100vw - 2rem)';
+// Laptop (≥ lg): selebar layar, tinggi maks. 75% layar (monitor sangat lebar: dipotong atas-bawah, bukan memanjang)
+$rasioHero  = ($semuaPunyaMobile ? 'aspect-[4/3] sm:aspect-[16/7]' : 'aspect-[16/7]') . ' lg:max-h-[75vh] lg:w-full';
+$sizesHero  = '(min-width: 1024px) 100vw, calc(100vw - 2rem)';
 $pertama    = $banner[0] ?? null;
 
 // Preload gambar LCP (slide pertama) agar mulai diunduh sebelum CSS selesai
@@ -51,9 +52,9 @@ foreach ($banner as $i => $b) {
         $gambar = '<picture><source media="(max-width: 639px)" srcset="' . e((string) img_srcset($b['foto_mobile'], 'banner', $mw))
             . '" sizes="' . e($sizesHero) . '" width="' . $mw . '" height="' . $mh . '">' . $gambar . '</picture>';
     }
-    $isi = '<div class="' . $rasioHero . ' overflow-hidden rounded-2xl bg-surface">' . $gambar . '</div>';
+    $isi = '<div class="' . $rasioHero . ' overflow-hidden rounded-2xl bg-surface lg:rounded-none">' . $gambar . '</div>';
     $slideHero[] = !empty($b['link'])
-        ? '<a href="' . e(url($b['link'])) . '" class="block rounded-2xl">' . $isi . '</a>'
+        ? '<a href="' . e(url($b['link'])) . '" class="block rounded-2xl lg:rounded-none">' . $isi . '</a>'
         : $isi;
 }
 
@@ -77,23 +78,26 @@ $this->layout('site', [
     'jsonLd'      => [$organisasi],
 ]);
 
+// Ikon berwarna: Bayar Zakat = SVG inline (partials/ikon-nav); lainnya WebP transparan dari public/icon/*.png
+// (assets/img/aksi/{nama}-72|108.webp, ±3 KB; aslinya ±1 MB).
 $aksiCepat = [
-    ['Bayar Zakat', '/bayar-zakat', 'heart'],
-    ['Kalkulator', '/kalkulator-zakat', 'calculator'],
-    ['Konfirmasi', '/konfirmasi', 'upload'],
-    ['Rekening', '/rekening', 'bank'],
+    ['Bayar Zakat', '/bayar-zakat', ['svg', 'bayar-zakat']],
+    ['Kalkulator', '/kalkulator-zakat', ['img', 'kalkulator']],
+    ['Konfirmasi', '/konfirmasi', ['img', 'konfirmasi']],
+    ['Rekening', '/rekening', ['img', 'rekening']],
 ];
 ?>
 <h1 class="sr-only"><?= e($namaSitus) ?> — <?= e(setting('tagline', 'Badan Amil Zakat Nasional')) ?></h1>
 
 <?php /* 1. Hero banner */ ?>
 <?php if ($slideHero !== []): ?>
-<div class="mx-auto max-w-6xl px-4 pt-4 lg:pt-6">
+<div class="mx-auto max-w-6xl px-4 pt-4 lg:max-w-none lg:px-0 lg:pt-0">
     <?= $this->insert('components/carousel', [
-        'label'     => 'Banner utama',
-        'slides'    => $slideHero,
-        'itemClass' => 'w-full',
-        'autoplay'  => 6000,
+        'label'        => 'Banner utama',
+        'slides'       => $slideHero,
+        'itemClass'    => 'w-full',
+        'autoplay'     => 6000,
+        'kontrolClass' => 'lg:mx-auto lg:max-w-6xl lg:px-4', // kontrol tetap sejajar konten di bawahnya
     ]) ?>
 </div>
 <?php endif ?>
@@ -101,10 +105,17 @@ $aksiCepat = [
 <?php /* 2. Aksi cepat (HP) */ ?>
 <nav aria-label="Aksi cepat" class="mx-auto max-w-6xl px-4 pt-2 lg:hidden">
     <ul class="grid grid-cols-4 gap-2">
-        <?php foreach ($aksiCepat as [$label, $link, $ikon]): ?>
+        <?php foreach ($aksiCepat as [$label, $link, [$jenis, $ikon]]): ?>
         <li>
             <a href="<?= e(url($link)) ?>" class="flex flex-col items-center gap-1.5 rounded-2xl p-2 text-center text-xs font-semibold text-ink hover:bg-surface">
-                <span class="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><?= icon($ikon) ?></span>
+                <span class="grid size-14 place-items-center rounded-2xl bg-primary/10">
+                    <?php if ($jenis === 'svg'): ?>
+                    <?= $this->insert('partials/ikon-nav', ['nama' => $ikon, 'aktif' => false, 'berwarna' => true, 'ukuran' => 'size-9']) ?>
+                    <?php else: ?>
+                    <img src="<?= e(asset('img/aksi/' . $ikon . '-72.webp')) ?>" srcset="<?= e(asset('img/aksi/' . $ikon . '-72.webp')) ?> 2x, <?= e(asset('img/aksi/' . $ikon . '-108.webp')) ?> 3x"
+                         width="36" height="36" alt="" decoding="async" class="size-9">
+                    <?php endif ?>
+                </span>
                 <?= e($label) ?>
             </a>
         </li>
@@ -137,7 +148,7 @@ $aksiCepat = [
         <ul class="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
             <?php foreach ($pilar as $i => $p): ?>
             <li class="<?= $i === count($pilar) - 1 && count($pilar) % 2 === 1 ? 'col-span-2 lg:col-span-1' : '' ?>">
-                <?= $this->insert('components/card-program', ['pilar' => $p]) ?>
+                <?= $this->insert('components/card-program', ['pilar' => $p, 'besar' => true]) ?>
             </li>
             <?php endforeach ?>
         </ul>
@@ -233,23 +244,39 @@ $aksiCepat = [
 </section>
 <?php endif ?>
 
-<?php /* 9. Testimoni (tampil bila sudah ada data terbit) */ ?>
-<?php if ($testimoni !== []): ?>
+<?php /* 9. Testimoni + form kirim testimoni (muzaki/mustahik mengisi sendiri, dimoderasi admin) */ ?>
+<?php $formTerbuka = App\Core\Session::getFlash('testimoni_terkirim') || App\Core\Session::getFlash('errors') ?>
 <section class="cv-auto bg-surface" aria-labelledby="judul-testimoni">
     <div class="<?= $blok ?>">
-        <?= $this->insert('components/section-title', ['judul' => 'Kata Mereka', 'id' => 'judul-testimoni', 'subjudul' => 'Pengalaman muzaki dan mustahik bersama BAZNAS Bangka Selatan.', 'link' => '/testimoni']) ?>
+        <?= $this->insert('components/section-title', ['judul' => 'Kata Mereka', 'id' => 'judul-testimoni', 'subjudul' => 'Pengalaman muzaki dan mustahik bersama BAZNAS Bangka Selatan.'] + ($testimoni !== [] ? ['link' => '/testimoni'] : [])) ?>
+        <?php if ($testimoni !== []): ?>
         <?= $this->insert('components/carousel', [
             'label'     => 'Testimoni',
             'itemClass' => 'w-[85%] sm:w-[45%] lg:w-[calc((100%-2*1rem)/3)]',
             'slides'    => array_map(fn (array $t): string => $this->insert('components/card-testimoni', ['testimoni' => $t]), $testimoni),
         ]) ?>
+        <?php endif ?>
+
+        <details id="kirim-testimoni" class="group mt-8 scroll-mt-24 rounded-2xl border border-gray-200 bg-white shadow-sm"<?= $formTerbuka ? ' open' : '' ?>>
+            <summary class="flex cursor-pointer list-none items-center gap-4 p-5 lg:p-6 [&::-webkit-details-marker]:hidden">
+                <span class="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent/20 text-primary"><?= icon('star', 'size-6') ?></span>
+                <span class="min-w-0 flex-1">
+                    <span class="block font-bold text-ink lg:text-lg">Bagikan pengalaman Anda</span>
+                    <span class="block text-sm text-muted">Muzaki atau mustahik? Ceritakan pengalaman Anda bersama BAZNAS Bangka Selatan.</span>
+                </span>
+                <span class="hidden shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white group-open:hidden sm:inline-flex">Tulis testimoni</span>
+                <?= icon('chevron-down', 'size-5 shrink-0 text-muted transition-transform group-open:rotate-180 sm:hidden') ?>
+            </summary>
+            <div class="border-t border-gray-200 p-5 lg:p-6">
+                <?= $this->insert('components/form-testimoni', ['asal' => 'beranda']) ?>
+            </div>
+        </details>
     </div>
 </section>
-<?php endif ?>
 
-<?php /* 10. Mitra */ ?>
+<?php /* 10. Mitra (latar putih — bagian testimoni di atasnya kini selalu tampil berlatar abu) */ ?>
 <?php if ($mitra !== []): ?>
-<section id="mitra" class="cv-auto scroll-mt-16 <?= $testimoni !== [] ? '' : 'bg-surface' ?>" aria-labelledby="judul-mitra">
+<section id="mitra" class="cv-auto scroll-mt-16" aria-labelledby="judul-mitra">
     <div class="<?= $blok ?>">
         <?= $this->insert('components/section-title', ['judul' => 'Mitra Kami', 'id' => 'judul-mitra', 'tengah' => true]) ?>
         <ul tabindex="0" aria-label="Logo mitra — geser untuk melihat lainnya"
@@ -275,4 +302,5 @@ $aksiCepat = [
     <script type="module" src="<?= e(asset('js/tabs.js')) ?>" fetchpriority="low"></script>
     <script type="module" src="<?= e(asset('js/ticker.js')) ?>" fetchpriority="low"></script>
     <script type="module" src="<?= e(asset('js/lite-yt.js')) ?>" fetchpriority="low"></script>
+    <script type="module" src="<?= e(asset('js/testimoni.js')) ?>" fetchpriority="low"></script>
 <?php $this->stop() ?>
