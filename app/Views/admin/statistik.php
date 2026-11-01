@@ -5,6 +5,7 @@
  *
  * @var App\Core\View $this
  * @var array $s hasil StatistikZakatService::untuk()
+ * @var array<string, string>|null $pertahankan parameter filter lain di dasbor (pengumpulan) yang ikut dikirim ulang
  */
 
 use App\Services\StatistikZakatService as Statistik;
@@ -40,6 +41,7 @@ $adaTahunan = array_sum($tahunan['lalu']) > 0 || array_filter($tahunan['ini']) !
 
     <?php /* Satu baris filter di atas semua yang dicakupnya */ ?>
     <form method="get" action="<?= e(url('admin')) ?>#statistik" class="mt-4 flex flex-wrap items-center gap-2" data-filter-statistik>
+        <?php foreach ($pertahankan ?? [] as $k => $v): ?><input type="hidden" name="<?= e($k) ?>" value="<?= e($v) ?>"><?php endforeach ?>
         <label for="f-periode" class="sr-only">Periode</label>
         <select id="f-periode" name="periode" class="<?= $kelasInput ?>">
             <?php foreach (Statistik::PRESET as $k => $label): ?>

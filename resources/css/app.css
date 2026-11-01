@@ -3,6 +3,7 @@
 
 @source "../../app/Views";
 @source "../../public/assets/js";
+@source "../../config/admin.php"; /* 'kelas' grup/field form admin */
 
 /* Design token §13.1 — menjadi utility: bg-primary, text-accent, text-muted, bg-surface, dst. */
 @theme {

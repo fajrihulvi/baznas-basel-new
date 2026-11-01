@@ -34,17 +34,35 @@ const isiTooltip = (rect) => {
   }
 };
 
-document.querySelectorAll('svg[data-grafik]').forEach((svg) => {
+// data-grafik: <svg> (kolom per periode) atau daftar HTML (baris per item, mis. per Perangkat Daerah)
+document.querySelectorAll('[data-grafik]').forEach((svg) => {
   const wadah = svg.closest('[data-grafik-wadah]');
   const sentuh = [...svg.querySelectorAll('.grafik-sentuh')];
+  if (sentuh.length === 0) return;
   const silang = svg.querySelector('.grafik-silang');
+  const html = !(svg instanceof SVGElement);
+  // Titik awal saat difokus: data-grafik-awal (mis. bulan yang dipilih), selain itu periode terbaru
+  const awal = Math.min(sentuh.length - 1, Number(svg.dataset.grafikAwal ?? sentuh.length - 1));
   let aktif = -1;
 
-  // Layar sempit: grafik bisa digeser; mulai dari ujung kanan (periode terbaru = yang paling penting)
-  if (wadah.scrollWidth > wadah.clientWidth) wadah.scrollLeft = wadah.scrollWidth;
+  // Layar sempit: grafik bisa digeser; mulai dari titik awal (bawaan ujung kanan = periode terbaru)
+  if (wadah.scrollWidth > wadah.clientWidth) {
+    if (svg.dataset.grafikAwal === undefined) {
+      wadah.scrollLeft = wadah.scrollWidth;
+    } else {
+      const kotak = sentuh[awal].getBoundingClientRect();
+      const dasar = wadah.getBoundingClientRect();
+      wadah.scrollLeft = kotak.left - dasar.left - (wadah.clientWidth - kotak.width) / 2;
+    }
+  }
+
+  const sorot = (r, ya) => {
+    if (html) r.classList.toggle('bg-surface', ya);
+    else r.setAttribute('fill-opacity', ya ? '0.06' : '0');
+  };
 
   const tampil = (i) => {
-    sentuh.forEach((r, j) => r.setAttribute('fill-opacity', j === i ? '0.06' : '0'));
+    sentuh.forEach((r, j) => sorot(r, j === i));
     aktif = i;
     const rect = sentuh[i];
     if (silang && rect.dataset.silang) {
@@ -59,13 +77,20 @@ document.querySelectorAll('svg[data-grafik]').forEach((svg) => {
     const kotak = rect.getBoundingClientRect();
     const dasar = wadah.getBoundingClientRect();
     const lebar = tooltip.offsetWidth;
+    if (html) {
+      // Baris: tooltip tepat di bawah baris aktif, rata kanan baris (tidak menutupi labelnya)
+      const kiri = Math.min(kotak.right - dasar.left - lebar, wadah.clientWidth - lebar);
+      tooltip.style.left = `${Math.max(0, kiri)}px`;
+      tooltip.style.top = `${kotak.bottom - dasar.top + 4}px`;
+      return;
+    }
     let kiri = kotak.right - dasar.left + wadah.scrollLeft + 8;
     if (kiri + lebar > wadah.scrollLeft + wadah.clientWidth) kiri = kotak.left - dasar.left + wadah.scrollLeft - lebar - 8;
     tooltip.style.left = `${Math.max(wadah.scrollLeft, kiri)}px`;
     tooltip.style.top = '8px';
   };
   const sembunyi = () => {
-    sentuh.forEach((r) => r.setAttribute('fill-opacity', '0'));
+    sentuh.forEach((r) => sorot(r, false));
     silang?.setAttribute('visibility', 'hidden');
     tooltip.classList.add('hidden');
     aktif = -1;
@@ -73,12 +98,15 @@ document.querySelectorAll('svg[data-grafik]').forEach((svg) => {
 
   sentuh.forEach((r, i) => r.addEventListener('pointerenter', () => tampil(i)));
   svg.addEventListener('pointerleave', sembunyi);
-  svg.addEventListener('focus', () => tampil(aktif < 0 ? sentuh.length - 1 : aktif));
+  svg.addEventListener('focus', () => tampil(aktif < 0 ? awal : aktif));
   svg.addEventListener('blur', sembunyi);
   svg.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const maju = html ? 'ArrowDown' : 'ArrowRight';
+    const mundur = html ? 'ArrowUp' : 'ArrowLeft';
+    if (e.key === maju || e.key === mundur) {
       e.preventDefault();
-      tampil(Math.min(sentuh.length - 1, Math.max(0, aktif + (e.key === 'ArrowRight' ? 1 : -1))));
+      tampil(Math.min(sentuh.length - 1, Math.max(0, aktif + (e.key === maju ? 1 : -1))));
+      if (html) sentuh[aktif].scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'Escape') {
       sembunyi();
     }
@@ -92,4 +120,9 @@ document.querySelectorAll('form[data-filter-statistik]').forEach((form) => {
     form.elements.sampai.value = '';
     form.requestSubmit();
   });
+});
+
+// Filter pengumpulan (bulan/tahun): pilihan langsung diterapkan; tombol Terapkan tetap untuk tanpa JS
+document.querySelectorAll('form[data-filter-otomatis]').forEach((form) => {
+  form.querySelectorAll('select').forEach((s) => s.addEventListener('change', () => form.requestSubmit()));
 });

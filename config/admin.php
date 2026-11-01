@@ -26,6 +26,7 @@ $polaTautan = 'regex:#^(/(?!/)|https?://|mailto:|tel:)#i';
 return [
     'menu' => [
         'Zakat'     => ['pembayaran' => 'Pembayaran', 'rekening' => 'Rekening', 'zakat' => 'Penjelasan Zakat', 'layanan' => 'Layanan Beranda'],
+        'Pengumpulan' => ['pengumpulan' => 'Pengumpulan', 'perangkat-daerah' => 'Perangkat Daerah'],
         'Penyaluran' => ['distribusi' => 'Distribusi'],
         'Konten'    => ['post' => 'Kabar & Kegiatan', 'banner' => 'Banner', 'video' => 'Video', 'galeri' => 'Galeri', 'testimoni' => 'Testimoni', 'mitra' => 'Mitra'],
         'Program'   => ['pilar' => '5 Pilar', 'sub-program' => 'Sub-program'],
@@ -114,6 +115,56 @@ return [
                 'urutan'           => $urutan,
             ],
             'cache' => ['site', 'home', 'sitemap'],
+        ],
+
+        // Setoran ZIS Perangkat Daerah per bulan; 1–3 jenis sekaligus. Statistiknya di dasbor (StatistikPengumpulanService).
+        'pengumpulan' => [
+            'judul' => 'Pengumpulan', 'tunggal' => 'pengumpulan', 'tabel' => 'pengumpulan', 'pk' => 'id',
+            'urut' => 'periode DESC, tgl DESC, id DESC', 'cari' => ['keterangan', 'petugas'],
+            'cari_sql' => ['id_perangkat_daerah IN (SELECT id FROM perangkat_daerah WHERE nama LIKE ? OR singkatan LIKE ?)'],
+            'keterangan' => 'Setoran zakat, infaq/sedekah, dan DSKL dari Perangkat Daerah per bulan. Satu setoran boleh berisi satu, dua, atau ketiga jenis sekaligus. Total & grafiknya tampil di Dasbor (juga untuk akun Kepala). Cari menurut nama atau singkatan PD.',
+            'kolom' => ['id' => 'teks', 'periode' => 'bulan', 'id_perangkat_daerah' => 'pilihan', 'zakat' => 'rupiah', 'infaq' => 'rupiah', 'dskl' => 'rupiah', 'total' => 'rupiah'],
+            // Di daftar cukup singkatan PD agar kolom nominal & tombol aksi tidak terdesak
+            'sumber_kolom' => ['id_perangkat_daerah' => "SELECT id, COALESCE(NULLIF(TRIM(singkatan), ''), nama) FROM perangkat_daerah"],
+            'label_kolom' => ['id' => 'ID', 'periode' => 'Bulan', 'tgl' => 'Tanggal', 'id_perangkat_daerah' => 'Perangkat Daerah', 'zakat' => 'Zakat', 'infaq' => 'Infaq/Sedekah', 'dskl' => 'DSKL', 'total' => 'Total'],
+            'grup' => [
+                'jenis' => ['judul' => 'Jenis pengumpulan & nominal', 'kelas' => 'grid gap-4 sm:grid-cols-3',
+                            'hint' => 'Isi satu, dua, atau ketiga jenis sesuai setoran. Kosongkan jenis yang tidak ada.'],
+            ],
+            'field' => [
+                'periode'             => ['tipe' => 'bulan', 'label' => 'Bulan dan tahun', 'aturan' => 'required|date',
+                                          'hint' => 'Bulan setoran, mis. potongan gaji Oktober 2026. Grafik dasbor memakai bulan ini.'],
+                'tgl'                 => ['tipe' => 'tanggal', 'label' => 'Tanggal pengumpulan', 'aturan' => 'required|date|before_or_equal:today',
+                                          'hint' => 'Tanggal dana diterima BAZNAS.'],
+                'id_perangkat_daerah' => ['tipe' => 'pilihan', 'label' => 'Perangkat Daerah', 'aturan' => 'required', 'kosong' => 'Pilih perangkat daerah…',
+                                          'sumber' => "SELECT id, IF(aktif = 1, nama, CONCAT(nama, ' (nonaktif)')) FROM perangkat_daerah ORDER BY aktif DESC, urutan, nama",
+                                          'hint' => 'Daftar dikelola di menu Pengumpulan → Perangkat Daerah.'],
+                'zakat'               => ['tipe' => 'rupiah', 'label' => 'Zakat', 'aturan' => 'nullable|integer|between:1,999999999999', 'grup' => 'jenis'],
+                'infaq'               => ['tipe' => 'rupiah', 'label' => 'Infaq/Sedekah', 'aturan' => 'nullable|integer|between:1,999999999999', 'grup' => 'jenis'],
+                'dskl'                => ['tipe' => 'rupiah', 'label' => 'DSKL', 'aturan' => 'nullable|integer|between:1,999999999999', 'grup' => 'jenis',
+                                          'hint' => 'Dana sosial keagamaan lainnya.'],
+                'total'               => ['tipe' => 'jumlah', 'label' => 'Total setoran', 'dari' => ['zakat', 'infaq', 'dskl'], 'grup' => 'jenis',
+                                          'kelas' => 'border-t border-gray-200 pt-4 sm:col-span-3'],
+                'keterangan'          => ['tipe' => 'panjang', 'label' => 'Keterangan', 'aturan' => 'nullable|max:2000', 'hint' => 'Mis. nomor bukti setor atau catatan rekonsiliasi.'],
+                'petugas'             => ['tipe' => 'teks', 'label' => 'Petugas pencatat', 'aturan' => 'nullable|max:100', 'bawaan' => 'nama_admin'],
+            ],
+            'hook'  => App\Admin\PengumpulanHook::class,
+            'cache' => [],
+        ],
+
+        'perangkat-daerah' => [
+            'judul' => 'Perangkat Daerah', 'tunggal' => 'perangkat daerah', 'tabel' => 'perangkat_daerah', 'pk' => 'id',
+            'urut' => 'aktif DESC, urutan, nama', 'cari' => ['nama', 'singkatan'],
+            'keterangan' => 'Daftar Perangkat Daerah (OPD & kecamatan) Pemkab Bangka Selatan untuk menu Pengumpulan. PD yang sudah punya data pengumpulan tidak bisa dihapus — hapus centang "Aktif" bila dilebur/berganti nama.',
+            'kolom' => ['nama' => 'teks', 'singkatan' => 'teks', 'urutan' => 'teks', 'aktif' => 'centang'],
+            'field' => [
+                'nama'      => ['tipe' => 'teks', 'label' => 'Nama perangkat daerah', 'aturan' => 'required|max:150', 'hint' => 'Nama resmi, mis. Dinas Komunikasi dan Informatika.'],
+                'singkatan' => ['tipe' => 'teks', 'label' => 'Singkatan', 'aturan' => 'nullable|max:30', 'hint' => 'Dipakai sebagai label pendek di grafik dasbor, mis. Diskominfo.'],
+                'urutan'    => $urutan,
+                'aktif'     => ['tipe' => 'centang', 'label' => 'Aktif (muncul di pilihan & dihitung di daftar "belum menyetor")', 'bawaan' => '1'],
+            ],
+            'hook'  => App\Admin\PerangkatDaerahHook::class,
+            'cache' => [],
         ],
 
         // Penyaluran dana ke sub-program; pilar ikut dari sub-program. Statistiknya di dasbor (StatistikDistribusiService).

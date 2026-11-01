@@ -10,7 +10,9 @@
  */
 $this->layout('admin', ['title' => $r->judul()]);
 $field = $r->field();
-$kolomUtama = array_search('teks', $r->kolom(), true); // kolom teks pertama ditebalkan
+$kolomUtama = array_search('teks', array_diff_key($r->kolom(), [$r->pk() => true]), true); // kolom teks pertama (selain ID) ditebalkan
+$labelKolom = $r->labelKolom();
+$px = count($r->kolom()) >= 7 ? 'px-3' : 'px-4'; // tabel berkolom banyak: sel lebih rapat agar tombol aksi tetap terlihat di 1280px
 ?>
 <div class="flex flex-wrap items-center gap-3">
     <h1 class="text-2xl font-bold"><?= e($r->judul()) ?></h1>
@@ -40,9 +42,9 @@ $kolomUtama = array_search('teks', $r->kolom(), true); // kolom teks pertama dit
         <thead class="border-b border-gray-200 bg-surface text-xs uppercase tracking-wide text-muted">
             <tr>
                 <?php foreach ($r->kolom() as $kolom => $tipe): ?>
-                <th scope="col" class="px-4 py-3 font-semibold<?= $tipe === 'gambar' ? ' w-20' : '' ?>"><?= $tipe === 'gambar' ? '<span class="sr-only">Gambar</span>' : e($field[$kolom]['label'] ?? ucfirst(str_replace('_', ' ', $kolom))) ?></th>
+                <th scope="col" class="<?= $px ?> py-3 font-semibold<?= $tipe === 'gambar' ? ' w-20' : '' ?>"><?= $tipe === 'gambar' ? '<span class="sr-only">Gambar</span>' : e($labelKolom[$kolom] ?? $field[$kolom]['label'] ?? ucfirst(str_replace('_', ' ', $kolom))) ?></th>
                 <?php endforeach ?>
-                <th scope="col" class="px-4 py-3 text-right font-semibold"><span class="sr-only">Aksi</span></th>
+                <th scope="col" class="<?= $px ?> py-3 text-right font-semibold"><span class="sr-only">Aksi</span></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
@@ -50,7 +52,7 @@ $kolomUtama = array_search('teks', $r->kolom(), true); // kolom teks pertama dit
             <?php $id = (int) $b[$r->pk()]; ?>
             <tr class="align-middle hover:bg-surface/60">
                 <?php foreach ($r->kolom() as $kolom => $tipe): ?>
-                <td class="px-4 py-3">
+                <td class="<?= $px ?> py-3">
                     <?php $nilai = $b[$kolom] ?? null; ?>
                     <?php if ($tipe === 'gambar'): ?>
                     <span class="block size-14 overflow-hidden rounded-lg bg-surface">
@@ -62,16 +64,20 @@ $kolomUtama = array_search('teks', $r->kolom(), true); // kolom teks pertama dit
                     <?= $nilai ? '<span class="font-semibold text-primary">Ya</span>' : '<span class="text-muted">—</span>' ?>
                     <?php elseif ($tipe === 'tanggal'): ?>
                     <span class="whitespace-nowrap"><?= e(tgl_id($nilai)) ?></span>
+                    <?php elseif ($tipe === 'bulan'): ?>
+                    <span class="whitespace-nowrap font-semibold text-ink"><?= e(App\Models\Pengumpulan::namaPeriode($nilai)) ?></span>
+                    <?php elseif ($tipe === 'rupiah' && $nilai === null): ?>
+                    <span class="text-muted">—</span>
                     <?php elseif ($tipe === 'rupiah'): ?>
                     <span class="whitespace-nowrap font-semibold text-ink" style="font-variant-numeric: tabular-nums"><?= e(format_rupiah($nilai)) ?></span>
                     <?php elseif ($tipe === 'pilihan'): ?>
-                    <?= e($r->pilihan($kolom)[(string) $nilai] ?? (string) $nilai) ?>
+                    <?= e($r->pilihanDaftar($kolom)[(string) $nilai] ?? (string) $nilai) ?>
                     <?php else: ?>
                     <span class="line-clamp-2<?= $kolom === $kolomUtama ? ' font-semibold text-ink' : '' ?>"><?= e((string) $nilai) ?></span>
                     <?php endif ?>
                 </td>
                 <?php endforeach ?>
-                <td class="px-4 py-3">
+                <td class="<?= $px ?> py-3">
                     <div class="flex justify-end gap-1">
                         <?php if ($tautan = $r->tautan($b)): ?>
                         <a href="<?= e(url($tautan)) ?>" target="_blank" rel="noopener" class="inline-flex h-9 items-center rounded-full px-3 font-semibold text-muted hover:text-primary">Lihat<span class="sr-only"> di situs</span></a>

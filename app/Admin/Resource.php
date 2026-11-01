@@ -60,6 +60,18 @@ final class Resource
         return $this->def['kolom'];
     }
 
+    /** Judul kolom daftar yang berbeda dari label field-nya ('label_kolom'). @return array<string, string> */
+    public function labelKolom(): array
+    {
+        return $this->def['label_kolom'] ?? [];
+    }
+
+    /** Kelompok field di form ('grup': kunci => [judul, hint, kelas]); field ikut kelompok lewat 'grup' => kunci. */
+    public function grup(string $kunci): ?array
+    {
+        return $this->def['grup'][$kunci] ?? null;
+    }
+
     public function boleh(string $aksi): bool
     {
         return in_array($aksi, $this->def['aksi'] ?? ['tambah', 'ubah', 'hapus'], true);
@@ -140,6 +152,25 @@ final class Resource
         return $this->pilihan[$field];
     }
 
+    /** Label nilai pilihan di daftar: 'sumber_kolom' (mis. singkatan) bila ada, selain itu sama dengan form. @return array<string, string> */
+    public function pilihanDaftar(string $kolom): array
+    {
+        $sql = $this->def['sumber_kolom'][$kolom] ?? null;
+        if ($sql === null) {
+            return $this->pilihan($kolom);
+        }
+        if (!isset($this->pilihan['#' . $kolom])) {
+            $hasil = [];
+            foreach (Database::fetchAll($sql) as $baris) {
+                $nilai = array_values($baris);
+                $hasil[(string) $nilai[0]] = (string) $nilai[1];
+            }
+            $this->pilihan['#' . $kolom] = $hasil;
+        }
+
+        return $this->pilihan['#' . $kolom];
+    }
+
     /** INSERT (id null) atau UPDATE; hanya kolom yang dikenal definisi. Mengembalikan id. */
     public function simpan(array $data, ?int $id): int
     {
@@ -200,8 +231,14 @@ final class Resource
             self::cekNama($k);
             return "{$k} LIKE ?";
         }, $this->def['cari']);
+        $jumlahTanda = count($kondisi);
+        // 'cari_sql': kondisi tepercaya dari config; setiap "?" diisi pola cari (mis. mencari nama di tabel relasi)
+        foreach ($this->def['cari_sql'] ?? [] as $sql) {
+            $kondisi[] = '(' . $sql . ')';
+            $jumlahTanda += substr_count($sql, '?');
+        }
 
-        return [' WHERE ' . implode(' OR ', $kondisi), array_fill(0, count($kondisi), $pola)];
+        return [' WHERE ' . implode(' OR ', $kondisi), array_fill(0, $jumlahTanda, $pola)];
     }
 
     private static function cekNama(string $nama): void

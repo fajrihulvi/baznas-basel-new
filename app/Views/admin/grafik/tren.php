@@ -1,15 +1,19 @@
 <?php
 /**
- * Batang bertumpuk: zakat masuk per hari/bulan/tahun, ditumpuk per kelompok zakat.
+ * Batang bertumpuk per periode (hari/bulan/tahun), ditumpuk per seri — dipakai zakat masuk (per kelompok) & pengumpulan (per jenis).
  * SVG dari server (tanpa library); tooltip & navigasi panah oleh assets/js/grafik.js.
  *
  * @var App\Core\View $this
- * @var list<array{kunci: string, label: string, judul: string, nilai: array<string, int>, total: int}> $tren
+ * @var list<array{label: string, judul: string, nilai: array<string, int>, total: int}> $tren
  * @var string $idJudul id judul grafik (aria-labelledby)
+ * @var array<string, array{label: string, warna: string}>|null $seri  bawaan: StatistikZakatService::KELOMPOK
+ * @var int|null $sorot indeks batang yang disorot (lainnya dipudarkan), mis. bulan yang dipilih di filter
  */
 
 use App\Services\StatistikZakatService as Statistik;
 
+$seri ??= Statistik::KELOMPOK;
+$sorot ??= null;
 $W = 720;
 $kiri = 64;
 $kanan = 8;
@@ -28,7 +32,7 @@ $setiap = (int) ceil($n / 12);
 $bulat = static fn (float $v): string => rtrim(rtrim(number_format($v, 1, '.', ''), '0'), '.');
 ?>
 <div class="relative overflow-x-auto" data-grafik-wadah>
-    <svg viewBox="0 0 <?= $W ?> <?= $H ?>" class="w-full min-w-[600px]" role="img" aria-labelledby="<?= e($idJudul) ?>" data-grafik tabindex="0">
+    <svg viewBox="0 0 <?= $W ?> <?= $H ?>" class="w-full min-w-[600px]" role="img" aria-labelledby="<?= e($idJudul) ?>" data-grafik tabindex="0"<?= $sorot !== null ? ' data-grafik-awal="' . (int) $sorot . '"' : '' ?>>
         <?php foreach ($ticks as $t): ?>
         <line x1="<?= $kiri ?>" x2="<?= $W - $kanan ?>" y1="<?= $bulat($y($t)) ?>" y2="<?= $bulat($y($t)) ?>" stroke="<?= $t === 0 ? '#c3c2b7' : '#e5e7eb' ?>" stroke-width="1" shape-rendering="crispEdges"/>
         <text x="<?= $kiri - 8 ?>" y="<?= $bulat($y($t) + 4) ?>" text-anchor="end" font-size="12" fill="#6b7280" style="font-variant-numeric: tabular-nums"><?= e(rupiah_ringkas($t)) ?></text>
@@ -38,8 +42,12 @@ $bulat = static fn (float $v): string => rtrim(rtrim(number_format($v, 1, '.', '
         <?php
         $x = $kiri + $i * $slot + ($slot - $batang) / 2;
         $alas = $atas + $tinggi;
-        $isi = array_filter($b['nilai']);
+        $isi = array_filter(array_intersect_key($b['nilai'], $seri));
         $terakhir = array_key_last($isi);
+        $pudar = $sorot !== null && $i !== $sorot;
+        ?>
+        <g<?= $pudar ? ' opacity="0.35"' : '' ?>>
+        <?php
         foreach ($isi as $k => $v):
             $h = $v / $maks * $tinggi;
             $top = $alas - $h;
@@ -50,15 +58,17 @@ $bulat = static fn (float $v): string => rtrim(rtrim(number_format($v, 1, '.', '
                     $d = sprintf('M%s %sV%sQ%s %s %s %sH%sQ%s %s %s %sV%sZ', $bulat($x), $bulat($alas), $bulat($top + $r), $bulat($x), $bulat($top), $bulat($x + $r), $bulat($top),
                         $bulat($x + $batang - $r), $bulat($x + $batang), $bulat($top), $bulat($x + $batang), $bulat($top + $r), $bulat($alas));
         ?>
-        <path d="<?= $d ?>" fill="<?= Statistik::KELOMPOK[$k]['warna'] ?>"/>
+        <path d="<?= $d ?>" fill="<?= e($seri[$k]['warna']) ?>"/>
                 <?php else: ?>
-        <rect x="<?= $bulat($x) ?>" y="<?= $bulat($top + 2) ?>" width="<?= $bulat($batang) ?>" height="<?= $bulat($hGambar) ?>" fill="<?= Statistik::KELOMPOK[$k]['warna'] ?>"/>
+        <rect x="<?= $bulat($x) ?>" y="<?= $bulat($top + 2) ?>" width="<?= $bulat($batang) ?>" height="<?= $bulat($hGambar) ?>" fill="<?= e($seri[$k]['warna']) ?>"/>
                 <?php endif ?>
             <?php endif ?>
         <?php $alas = $top; endforeach ?>
+        </g>
 
         <?php if ($i % $setiap === 0): ?>
-        <text x="<?= $bulat($kiri + ($i + 0.5) * $slot) ?>" y="<?= $atas + $tinggi + 20 ?>" text-anchor="middle" font-size="12" fill="#6b7280"><?= e($b['label']) ?></text>
+        <text x="<?= $bulat($kiri + ($i + 0.5) * $slot) ?>" y="<?= $atas + $tinggi + 20 ?>" text-anchor="middle" font-size="12"
+              fill="<?= $sorot === $i ? '#111827' : '#6b7280' ?>"<?= $sorot === $i ? ' font-weight="700"' : '' ?>><?= e($b['label']) ?></text>
         <?php endif ?>
         <?php endforeach ?>
 
@@ -66,8 +76,8 @@ $bulat = static fn (float $v): string => rtrim(rtrim(number_format($v, 1, '.', '
         <?php foreach ($tren as $i => $b): ?>
         <?php
         $baris = [];
-        foreach (Statistik::KELOMPOK as $k => $kel) {
-            $baris[] = [$kel['label'], $kel['warna'], format_rupiah($b['nilai'][$k])];
+        foreach ($seri as $k => $s) {
+            $baris[] = [$s['label'], $s['warna'], format_rupiah($b['nilai'][$k] ?? 0)];
         }
         ?>
         <rect x="<?= $bulat($kiri + $i * $slot) ?>" y="<?= $atas ?>" width="<?= $bulat($slot) ?>" height="<?= $tinggi ?>" fill="#0b6b3a" fill-opacity="0" class="grafik-sentuh"

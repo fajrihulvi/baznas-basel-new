@@ -39,7 +39,7 @@ Perkiraan waktu: 2–3 jam. Pilih jam sepi (mis. malam hari kerja).
    ```
 4. Jalankan pengolahan (variabel `DB_NAME=` di depan perintah mengalahkan isi `.env`, jadi `.env` tidak perlu diubah):
    ```sh
-   DB_NAME=baznas_rilis php database/scripts/migrate.php                     # 001–011
+   DB_NAME=baznas_rilis php database/scripts/migrate.php                     # 001–012
    php database/scripts/generate_image_variants.php --sumber=$HOME/Backups/baznas-basel/uploads-lama-HARIINI
    DB_NAME=baznas_rilis php database/scripts/migrate_posts.php
    DB_NAME=baznas_rilis php database/scripts/reset_admin_password.php        # password admin produksi (min. 8 karakter)

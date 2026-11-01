@@ -27,8 +27,37 @@ $adaFile = (bool) array_filter($r->field(), static fn (array $f): bool => in_arr
 <form method="post" action="<?= e(url($aksi)) ?>"<?= $adaFile ? ' enctype="multipart/form-data"' : '' ?>
       class="mt-6 max-w-3xl space-y-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:p-8">
     <?= csrf_field() ?>
-    <?php foreach ($r->field() as $nama => $f): ?>
+    <?php
+    // Field berurutan dengan 'grup' sama → satu <fieldset> (mis. beberapa nominal + totalnya)
+    $bagian = [];
+    foreach ($r->field() as $nama => $f) {
+        $g = $f['grup'] ?? null;
+        $akhir = array_key_last($bagian);
+        if ($g !== null && $akhir !== null && $bagian[$akhir][0] === $g) {
+            $bagian[$akhir][1][$nama] = $f;
+        } else {
+            $bagian[] = [$g, [$nama => $f]];
+        }
+    }
+    ?>
+    <?php foreach ($bagian as [$g, $isi]): ?>
+    <?php if ($g !== null && ($grup = $r->grup($g)) !== null): ?>
+    <fieldset class="rounded-2xl border border-gray-200 bg-surface/50 p-4 sm:p-5"<?= !empty($grup['hint']) ? ' aria-describedby="grup-' . e($g) . '-hint"' : '' ?>>
+        <legend class="float-left w-full font-bold text-ink"><?= e($grup['judul']) ?></legend>
+        <?php if (!empty($grup['hint'])): ?>
+        <p id="grup-<?= e($g) ?>-hint" class="clear-left pt-1 text-sm text-muted"><?= e($grup['hint']) ?></p>
+        <?php endif ?>
+        <div class="clear-left mt-4 <?= e($grup['kelas'] ?? 'space-y-6') ?>">
+            <?php foreach ($isi as $nama => $f): ?>
+            <?= $this->insert('admin/field', ['r' => $r, 'nama' => $nama, 'f' => $f, 'baris' => $baris, 'awal' => $awal[$nama] ?? null]) ?>
+            <?php endforeach ?>
+        </div>
+    </fieldset>
+    <?php else: ?>
+    <?php foreach ($isi as $nama => $f): ?>
     <?= $this->insert('admin/field', ['r' => $r, 'nama' => $nama, 'f' => $f, 'baris' => $baris, 'awal' => $awal[$nama] ?? null]) ?>
+    <?php endforeach ?>
+    <?php endif ?>
     <?php endforeach ?>
 
     <div class="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-6">

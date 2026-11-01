@@ -259,7 +259,7 @@ final class ResourceController extends Controller
         $v = Validator::make(array_map(static fn ($x) => $x === null ? null : (string) $x, $data), $aturan, $label);
 
         foreach ($r->field() as $nama => $f) {
-            if ($f['tipe'] === 'bulan' && $data[$nama] !== null && !$v->fails() && !preg_match('/^\d{4}-\d{2}-01$/', (string) $data[$nama])) {
+            if ($f['tipe'] === 'bulan' && $data[$nama] !== null && !preg_match('/^\d{4}-\d{2}-01$/', (string) $data[$nama])) {
                 $v->tambah($nama, $f['label'] . ' tidak valid.');
             }
             if ($f['tipe'] === 'pilihan' && $data[$nama] !== null &&!array_key_exists((string) $data[$nama], $r->pilihan($nama))) {

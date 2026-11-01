@@ -20,8 +20,9 @@ $nilai = match (true) {
     $adaLama           => isset($lama[$nama]) ? (string) $lama[$nama] : '',
     $baris !== null    => (string) ($baris[$nama] ?? ''),
     isset($awal)       => $awal,
-    default            => match ($f['bawaan'] ?? ($f['tipe'] === 'tanggal' ? 'hari_ini' : null)) {
+    default            => match ($f['bawaan'] ?? ['tanggal' => 'hari_ini', 'bulan' => 'bulan_ini'][$f['tipe']] ?? null) {
         'hari_ini'   => date('Y-m-d'),
+        'bulan_ini'  => date('Y-m-01'),
         'nama_admin' => ResourceController::namaAdmin(),
         null         => '',
         default      => (string) $f['bawaan'],
@@ -34,9 +35,9 @@ $deskripsi = trim((!empty($f['hint']) ? $id . '-hint ' : '') . ($error ? $id . '
 $kelasInput = 'block w-full rounded-xl border bg-white px-4 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 ' . ($error ? 'border-red-500' : 'border-gray-300');
 $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') . ($error ? ' aria-invalid="true"' : '');
 ?>
-<div>
+<div<?= !empty($f['kelas']) ? ' class="' . e($f['kelas']) . '"' : '' ?>>
     <?php if (in_array($f['tipe'], ['publish', 'centang'], true)): ?>
-    <?php $centang = $adaLama ? !empty($lama[$nama]) : ($baris !== null ? ($f['tipe'] === 'publish' ? ($baris[$nama] ?? 'N') === 'Y' : (bool) ($baris[$nama] ?? 0)) : $f['tipe'] === 'publish'); ?>
+    <?php $centang = $adaLama ? !empty($lama[$nama]) : ($baris !== null ? ($f['tipe'] === 'publish' ? ($baris[$nama] ?? 'N') === 'Y' : (bool) ($baris[$nama] ?? 0)) : $f['tipe'] === 'publish' || !empty($f['bawaan'])); ?>
     <label class="inline-flex cursor-pointer items-center gap-3 font-semibold">
         <input type="checkbox" name="<?= e($nama) ?>" value="1" class="size-5 accent-primary"<?= $centang ? ' checked' : '' ?>>
         <?= e($f['label']) ?>
@@ -105,6 +106,39 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
         </span>
         <?php endif ?>
     </div>
+
+    <?php elseif ($f['tipe'] === 'bulan'): ?>
+    <?php
+    // Bulan & tahun (disimpan YYYY-MM-01). Dua <select> — input type=month belum didukung semua browser desktop.
+    [$thPilih, $blPilih] = $adaLama ? [(string) ($lama[$nama . '_tahun'] ?? ''), (string) ($lama[$nama . '_bulan'] ?? '')]
+        : (preg_match('/^(\d{4})-(\d{2})/', $nilai, $m) ? [$m[1], (string) (int) $m[2]] : ['', '']);
+    $thAkhir = (int) date('Y') + 1;
+    $thAwal = min(2015, $thPilih !== '' ? (int) $thPilih : $thAkhir);
+    $kelasPilih = str_replace('block w-full ', '', $kelasInput); // lebar diatur flex (w-full membuat tahun mendesak bulan)
+    ?>
+    <div class="flex max-w-md gap-3">
+        <select id="<?= e($id) ?>" name="<?= e($nama) ?>_bulan"<?= $wajib ? ' required' : '' ?><?= $aria ?> class="<?= $kelasPilih ?> h-12 min-w-0 flex-1">
+            <option value="">Bulan…</option>
+            <?php foreach (App\Models\Pengumpulan::BULAN as $no => $namaBulan): ?>
+            <option value="<?= $no ?>"<?= (string) $no === $blPilih ? ' selected' : '' ?>><?= e($namaBulan) ?></option>
+            <?php endforeach ?>
+        </select>
+        <label for="<?= e($id) ?>-tahun" class="sr-only">Tahun</label>
+        <select id="<?= e($id) ?>-tahun" name="<?= e($nama) ?>_tahun"<?= $wajib ? ' required' : '' ?><?= $aria ?> class="<?= $kelasPilih ?> h-12 w-32 shrink-0">
+            <option value="">Tahun…</option>
+            <?php for ($th = $thAkhir; $th >= $thAwal; $th--): ?>
+            <option value="<?= $th ?>"<?= (string) $th === $thPilih ? ' selected' : '' ?>><?= $th ?></option>
+            <?php endfor ?>
+        </select>
+    </div>
+
+    <?php elseif ($f['tipe'] === 'jumlah'): ?>
+    <?php
+    // Total otomatis dari beberapa field rupiah ('dari'); dihitung ulang di server (hook) saat disimpan
+    $jumlah = $adaLama ? array_sum(array_map(static fn (string $k): int => angka($lama[$k] ?? ''), $f['dari'])) : (int) ($baris[$nama] ?? 0);
+    ?>
+    <output id="<?= e($id) ?>" for="<?= e(implode(' ', array_map(static fn (string $k): string => 'f-' . $k, $f['dari']))) ?>" data-jumlah="<?= e(implode(' ', $f['dari'])) ?>"
+            class="block text-2xl font-bold text-ink" style="font-variant-numeric: tabular-nums"<?= $aria ?>><?= e(format_rupiah($jumlah)) ?></output>
 
     <?php elseif ($f['tipe'] === 'angka' && !empty($f['geser'])): ?>
     <?php [$min, $maks, $langkah, $awal] = $f['geser'] + [0, 100, 5, 100]; $nilaiGeser = $nilai !== '' ? $nilai : (string) $awal; ?>

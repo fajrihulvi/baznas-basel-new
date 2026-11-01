@@ -25,6 +25,7 @@ php tests/http/uji_pengguna.php http://localhost:8002     # menu Pengguna: peran
 php tests/http/uji_distribusi.php http://localhost:8002   # menu Distribusi: CRUD, validasi, statistik dasbor, akses Kepala
 php tests/http/uji_testimoni.php http://localhost:8002    # form testimoni pengunjung: validasi, anti-spam, moderasi admin
 php tests/http/uji_tampilan.php http://localhost:8002     # warna kotak ikon pilar & Ikon Navigasi bawah
+php tests/http/uji_pengumpulan.php http://localhost:8002  # menu Pengumpulan & Perangkat Daerah, statistik dasbor, akses Kepala
 ```
 Setiap skrip diakhiri `SEMUA LULUS` atau daftar `GAGAL`. Berkas sementara di `tests/tmp/` (diabaikan git).
 

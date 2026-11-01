@@ -18,6 +18,18 @@ document.addEventListener('input', (e) => {
   input.value = n ? fmt.format(n) : '';
 });
 
+// --- Total otomatis beberapa isian rupiah (output[data-jumlah="zakat infaq dskl"]) ---
+document.querySelectorAll('output[data-jumlah]').forEach((keluaran) => {
+  const form = keluaran.closest('form');
+  const isian = keluaran.dataset.jumlah.split(' ').map((nama) => form.elements[nama]).filter(Boolean);
+  const hitung = () => {
+    const total = isian.reduce((jml, el) => jml + (Number(el.value.replace(/\D/g, '').slice(0, 15)) || 0), 0);
+    keluaran.textContent = `Rp${fmt.format(total)}`;
+  };
+  isian.forEach((el) => el.addEventListener('input', hitung));
+  hitung();
+});
+
 // --- Penggeser (input range) menampilkan nilainya di <output for> --------------------
 document.querySelectorAll('input[type="range"]').forEach((geser) => {
   const keluaran = geser.form?.querySelector(`output[for="${geser.id}"]`);
