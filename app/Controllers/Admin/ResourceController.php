@@ -33,6 +33,8 @@ final class ResourceController extends Controller
 {
     public const MAKS_GAMBAR = 5 * 1048576;
     public const MAKS_PDF    = 10 * 1048576;
+    /** Tipe field berupa unggahan file ke public/uploads/{folder} ('dokumen' = PDF atau Excel) */
+    public const TIPE_FILE = ['gambar', 'pdf', 'dokumen'];
 
     public function index(Request $request, string $res): Response
     {
@@ -102,7 +104,7 @@ final class ResourceController extends Controller
         }
 
         foreach ($r->field() as $nama => $f) {
-            if (in_array($f['tipe'], ['gambar', 'pdf'], true)) {
+            if (in_array($f['tipe'], self::TIPE_FILE, true)) {
                 Upload::hapusPublik($f['folder'], $baris[$nama] ?? null);
             }
         }
@@ -129,7 +131,7 @@ final class ResourceController extends Controller
         $fileLama = [];
         $errors = [];
         foreach ($r->field() as $nama => $f) {
-            if (!in_array($f['tipe'], ['gambar', 'pdf'], true)) {
+            if (!in_array($f['tipe'], self::TIPE_FILE, true)) {
                 continue;
             }
             $file = $request->file($nama);
@@ -143,6 +145,8 @@ final class ResourceController extends Controller
                             $data[$f['kolom_w']] = $hasil['width'];
                             $data[$f['kolom_h']] = $hasil['height'];
                         }
+                    } elseif ($f['tipe'] === 'dokumen') {
+                        $data[$nama] = Upload::dokumenPublik($file, $f['folder'], self::MAKS_PDF);
                     } else {
                         $data[$nama] = Upload::pdfPublik($file, $f['folder'], self::MAKS_PDF);
                     }

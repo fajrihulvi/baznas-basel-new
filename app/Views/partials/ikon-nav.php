@@ -29,7 +29,7 @@ $gerak  = ' transition-transform duration-200 ease-out group-hover:-translate-y-
 if (!empty($gambar)) {
     $filter = $warna ? '' : ' opacity-60 grayscale transition group-hover:opacity-100 group-hover:grayscale-0'
         . ($buka ? ' group-aria-expanded:opacity-100 group-aria-expanded:grayscale-0' : '');
-    echo img($gambar, 'ikon-nav', '', ['sizes' => '40px', 'class' => $ukuran . ' object-contain' . $filter . ($aktif ? $gerak : '')]);
+    echo img($gambar, 'ikon-nav', '', ['sizes' => '80px', 'class' => $ukuran . ' object-contain' . $filter . ($aktif ? $gerak : '')]);
 
     return;
 }

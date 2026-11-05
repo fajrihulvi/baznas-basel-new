@@ -49,7 +49,7 @@ final class Post
     {
         return Database::fetch(
             "SELECT p.id, p.jenis, p.judul, p.slug, p.ringkasan, p.konten, p.foto, p.foto_w, p.foto_h, p.penulis,
-                    p.tgl, p.updated_at, p.id_sub_program, s.sub_program, s.slug AS sub_slug, k.label AS pilar, k.slug AS pilar_slug
+                    p.tgl, p.updated_at, p.views, p.id_sub_program, s.sub_program, s.slug AS sub_slug, k.label AS pilar, k.slug AS pilar_slug
                FROM post p
                LEFT JOIN sub_program s ON s.id_sub_program = p.id_sub_program
                LEFT JOIN kategori_program k ON k.id_kategori_program = s.id_kategori_program
@@ -70,9 +70,39 @@ final class Post
         );
     }
 
-    public static function tambahDilihat(int $id): void
+    /** id post terbit menurut slug (untuk sinyal dilihat: tidak perlu memuat isi berita). */
+    public static function idTerbit(string $slug): ?int
     {
-        Database::execute('UPDATE post SET views = views + 1 WHERE id = ?', [$id]);
+        $id = Database::fetchColumn("SELECT id FROM post WHERE slug = ? AND publish = 'Y'", [$slug]);
+
+        return $id === false || $id === null ? null : (int) $id;
+    }
+
+    public static function jumlahDilihat(int $id): int
+    {
+        return (int) Database::fetchColumn('SELECT views FROM post WHERE id = ?', [$id]);
+    }
+
+    /**
+     * Tambah views hanya bila sidik ini belum tercatat. `updated_at = updated_at` wajib:
+     * kolom itu ON UPDATE dan dipakai dateModified & lastmod sitemap — dilihat bukan perubahan isi.
+     */
+    public static function catatKunjungan(int $id, string $sidik, string $tgl): bool
+    {
+        return Database::transaction(static function () use ($id, $sidik, $tgl): bool {
+            $baru = Database::execute('INSERT IGNORE INTO post_kunjungan (id_post, sidik, tgl) VALUES (?, ?, ?)', [$id, $sidik, $tgl]) > 0;
+            if ($baru) {
+                Database::execute('UPDATE post SET views = views + 1, updated_at = updated_at WHERE id = ?', [$id]);
+            }
+
+            return $baru;
+        });
+    }
+
+    /** Sidik hari sebelumnya tidak berguna lagi (garamnya sudah berganti). */
+    public static function hapusKunjunganLama(string $sebelum): int
+    {
+        return Database::execute('DELETE FROM post_kunjungan WHERE tgl < ?', [$sebelum]);
     }
 
     /** @param list<int> $idSub */

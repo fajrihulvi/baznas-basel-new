@@ -7,9 +7,11 @@ namespace App\Controllers\Site;
 use App\Controllers\Controller;
 use App\Core\HttpException;
 use App\Core\Paginator;
+use App\Core\RateLimiter;
 use App\Core\Request;
 use App\Core\Response;
 use App\Models\Post;
+use App\Services\DilihatService;
 
 /** Kabar: /berita (filter ?jenis=, ?hal=) dan /berita/{slug}. */
 final class PostController extends Controller
@@ -42,11 +44,28 @@ final class PostController extends Controller
     public function show(Request $request, string $slug): Response
     {
         $post = Post::bySlug($slug) ?? throw new HttpException(404);
-        Post::tambahDilihat((int) $post['id']);
 
         return $this->view('site/post-detail', [
             'post'    => $post,
             'terkait' => Post::terkait($post, 3),
         ]);
+    }
+
+    /** POST /berita/{slug}/dilihat — sinyal dari assets/js/dilihat.js (tanpa sesi, lihat DilihatService). */
+    public function dilihat(Request $request, string $slug): Response
+    {
+        if (!DilihatService::dariSitusIni($request)) {
+            throw new HttpException(403);
+        }
+        $id = Post::idTerbit($slug) ?? throw new HttpException(404);
+        if (DilihatService::bot($request->header('User-Agent'))) {
+            return new Response('', 204);
+        }
+        if (RateLimiter::terlalu('dilihat:' . $request->ip(), 120, 3600)) {
+            throw new HttpException(429);
+        }
+        DilihatService::catat($id, $request);
+
+        return Response::json(['dilihat' => Post::jumlahDilihat($id)]);
     }
 }

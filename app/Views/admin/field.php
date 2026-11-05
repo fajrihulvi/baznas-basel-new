@@ -23,6 +23,7 @@ $nilai = match (true) {
     default            => match ($f['bawaan'] ?? ['tanggal' => 'hari_ini', 'bulan' => 'bulan_ini'][$f['tipe']] ?? null) {
         'hari_ini'   => date('Y-m-d'),
         'bulan_ini'  => date('Y-m-01'),
+        
         'nama_admin' => ResourceController::namaAdmin(),
         null         => '',
         default      => (string) $f['bawaan'],
@@ -51,7 +52,7 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
     <textarea id="<?= e($id) ?>" name="<?= e($nama) ?>" rows="3"<?= $wajib ? ' required' : '' ?><?= $aria ?> class="<?= $kelasInput ?> py-3"><?= e($nilai) ?></textarea>
 
     <?php elseif ($f['tipe'] === 'html'): ?>
-    <textarea id="<?= e($id) ?>" name="<?= e($nama) ?>" rows="14" data-editor<?= $aria ?> class="<?= $kelasInput ?> py-3 font-mono text-sm"><?= e($nilai) ?></textarea>
+    <textarea id="<?= e($id) ?>" name="<?= e($nama) ?>" rows="14" data-editor data-unggah="<?= e(url('admin/unggah-gambar')) ?>"<?= $aria ?> class="<?= $kelasInput ?> py-3 font-mono text-sm"><?= e($nilai) ?></textarea>
 
     <?php elseif ($f['tipe'] === 'pilihan'): ?>
     <select id="<?= e($id) ?>" name="<?= e($nama) ?>"<?= $wajib ? ' required' : '' ?><?= $aria ?> class="<?= $kelasInput ?> h-12">
@@ -61,13 +62,13 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
         <?php endforeach ?>
     </select>
 
-    <?php elseif (in_array($f['tipe'], ['gambar', 'pdf'], true)): ?>
+    <?php elseif (in_array($f['tipe'], ResourceController::TIPE_FILE, true)): ?>
     <?php if ($baris !== null && !empty($baris[$nama])): ?>
     <div class="mb-3 flex items-center gap-3 rounded-xl bg-surface p-3">
         <?php if ($f['tipe'] === 'gambar'): ?>
         <span class="block h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-white"><?= img($baris[$nama], $f['folder'], '', ['sizes' => '112px', 'class' => 'size-full object-contain']) ?></span>
         <?php else: ?>
-        <a href="<?= e(url('uploads/' . $f['folder'] . '/' . $baris[$nama])) ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 font-semibold text-primary underline"><?= icon('document', 'size-5') ?>File saat ini</a>
+        <a href="<?= e(url('uploads/' . $f['folder'] . '/' . $baris[$nama])) ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-2 font-semibold text-primary underline"><?= icon('document', 'size-5') ?><?= $f['tipe'] === 'dokumen' ? 'File saat ini (' . e(format_dokumen((string) $baris[$nama])) . ')' : 'File saat ini' ?></a>
         <?php endif ?>
         <div class="text-sm text-muted">
             <p>Pilih file baru untuk mengganti.</p>
@@ -78,9 +79,13 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
     </div>
     <?php endif ?>
     <input type="file" id="<?= e($id) ?>" name="<?= e($nama) ?>"<?= $wajib ? ' required' : '' ?><?= $aria ?>
-           accept="<?= $f['tipe'] === 'gambar' ? 'image/jpeg,image/png,image/webp' : 'application/pdf' ?>"<?= $f['tipe'] === 'gambar' ? ' data-pratinjau' : '' ?>
+           accept="<?= match ($f['tipe']) { 'gambar' => 'image/jpeg,image/png,image/webp', 'dokumen' => 'application/pdf,.pdf,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel', default => 'application/pdf' } ?>"<?= $f['tipe'] === 'gambar' ? ' data-pratinjau' : '' ?>
            class="block w-full rounded-xl border border-dashed border-gray-300 bg-surface p-3 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:font-semibold file:text-white">
-    <p class="mt-1.5 text-xs text-muted"><?= $f['tipe'] === 'gambar' ? 'JPG, PNG, atau WebP, maks ' . number_format(batas_unggah(ResourceController::MAKS_GAMBAR) / 1048576, 1, ',', '.') . ' MB. Ukuran & varian WebP dibuat otomatis.' : 'PDF, maks ' . number_format(batas_unggah(ResourceController::MAKS_PDF) / 1048576, 1, ',', '.') . ' MB.' ?></p>
+    <p class="mt-1.5 text-xs text-muted"><?= match ($f['tipe']) {
+        'gambar' => 'JPG, PNG, atau WebP, maks ' . number_format(batas_unggah(ResourceController::MAKS_GAMBAR) / 1048576, 1, ',', '.') . ' MB. Ukuran & varian WebP dibuat otomatis.',
+        'dokumen' => 'PDF atau Excel (.xlsx/.xls, tanpa makro), maks ' . number_format(batas_unggah(ResourceController::MAKS_PDF) / 1048576, 1, ',', '.') . ' MB.',
+        default  => 'PDF, maks ' . number_format(batas_unggah(ResourceController::MAKS_PDF) / 1048576, 1, ',', '.') . ' MB.',
+    } ?></p>
 
     <?php elseif ($f['tipe'] === 'warna'): ?>
     <?php

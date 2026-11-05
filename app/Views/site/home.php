@@ -127,14 +127,15 @@ $aksiCepat = [
 <?php if ($layanan !== []): ?>
 <section class="<?= $blok ?>" aria-labelledby="judul-layanan">
     <?= $this->insert('components/section-title', [
-        'judul' => 'Tunaikan Zakat', 'id' => 'judul-layanan',
+        'judul' => 'Tunaikan Zakat', 'id' => 'judul-layanan', 'tengah' => true,
         'subjudul' => 'Pilih cara yang paling mudah untuk Anda.',
     ]) ?>
-    <?= $this->insert('components/carousel', [
-        'label'   => 'Layanan zakat',
-        'kolomLg' => min(4, count($layanan)),
-        'slides'  => array_map(fn (array $l): string => $this->insert('components/card-layanan', ['layanan' => $l]), $layanan),
-    ]) ?>
+    <?php /* Maks. 4 kartu (Layanan::MAKS_BERANDA): 2 kolom di HP, 4 kolom di laptop */ ?>
+    <ul class="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        <?php foreach ($layanan as $l): ?>
+        <li><?= $this->insert('components/card-layanan', ['layanan' => $l]) ?></li>
+        <?php endforeach ?>
+    </ul>
 </section>
 <?php endif ?>
 
@@ -256,7 +257,6 @@ $aksiCepat = [
             'slides'    => array_map(fn (array $t): string => $this->insert('components/card-testimoni', ['testimoni' => $t]), $testimoni),
         ]) ?>
         <?php endif ?>
-
         <details id="kirim-testimoni" class="group mt-8 scroll-mt-24 rounded-2xl border border-gray-200 bg-white shadow-sm"<?= $formTerbuka ? ' open' : '' ?>>
             <summary class="flex cursor-pointer list-none items-center gap-4 p-5 lg:p-6 [&::-webkit-details-marker]:hidden">
                 <span class="grid size-12 shrink-0 place-items-center rounded-2xl bg-accent/20 text-primary"><?= icon('star', 'size-6') ?></span>
@@ -283,10 +283,11 @@ $aksiCepat = [
             class="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 scrollbar-none lg:mx-0 lg:flex-wrap lg:justify-center lg:overflow-visible lg:px-0">
             <?php foreach ($mitra as $m): ?>
             <li class="shrink-0 snap-start">
-                <div class="grid h-20 w-36 place-items-center rounded-xl border border-gray-200 bg-white p-3">
+                <?php /* Logo berwarna asli; disorot → membesar (zoom in) di dalam kotaknya */ ?>
+                <div class="group grid h-20 w-36 place-items-center overflow-hidden rounded-xl border border-gray-200 bg-white p-3 transition-shadow duration-300 hover:border-primary/30 hover:shadow-md">
                     <?= img($m['logo'], 'mitra', $m['nama'], [
                         'width' => $m['dim'][0] ?? null, 'height' => $m['dim'][1] ?? null, 'sizes' => '120px',
-                        'class' => 'max-h-14 w-auto object-contain opacity-80 grayscale transition hover:opacity-100 hover:grayscale-0',
+                        'class' => 'max-h-14 w-auto object-contain transition-transform duration-300 ease-out group-hover:scale-120 motion-reduce:transition-none motion-reduce:group-hover:scale-100',
                     ]) ?>
                 </div>
             </li>

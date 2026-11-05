@@ -40,7 +40,7 @@ $flash     = Session::getFlash('alert');
     <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
     <?= $this->section('head') ?>
 </head>
-<body class="flex min-h-dvh flex-col bg-white text-ink antialiased pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+<body class="flex min-h-dvh flex-col bg-white text-ink antialiased pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
     <a href="#konten" class="sr-only z-50 rounded-lg bg-primary px-4 py-3 font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Lewati ke konten</a>
 
     <?= $this->insert('partials/header') ?>

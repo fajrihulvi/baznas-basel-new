@@ -22,6 +22,13 @@ final class PerangkatDaerah
         return trim((string) preg_replace('/\s+/u', ' ', $nama));
     }
 
+    /** @return list<array{id: int, nama: string, singkatan: ?string, aktif: bool}> semua PD (untuk mencocokkan baris impor) */
+    public static function semua(): array
+    {
+        return array_map(static fn (array $b): array => ['id' => (int) $b['id'], 'nama' => (string) $b['nama'], 'singkatan' => $b['singkatan'], 'aktif' => (int) $b['aktif'] === 1],
+            Database::fetchAll('SELECT id, nama, singkatan, aktif FROM perangkat_daerah ORDER BY urutan, nama'));
+    }
+
     /** @return list<array{id: int, nama: string, singkatan: ?string}> PD aktif, urut tampilan */
     public static function aktif(): array
     {

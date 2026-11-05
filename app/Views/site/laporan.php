@@ -1,9 +1,9 @@
 <?php
 /**
- * /laporan — laporan keuangan (PDF).
+ * /laporan — laporan keuangan (PDF atau Excel).
  *
  * @var App\Core\View $this
- * @var list<array>   $laporan  id, judul, file, tahun, tgl
+ * @var list<array>   $laporan  id, judul, file (PDF atau Excel), tahun, tgl
  */
 $this->layout('site', [
     'title'       => 'Laporan Keuangan',
@@ -27,7 +27,16 @@ $this->layout('site', [
     <?php else: ?>
     <ul class="divide-y divide-gray-200 overflow-hidden rounded-2xl border border-gray-200 bg-white">
         <?php foreach ($laporan as $l): ?>
-        <?php $file = 'uploads/laporan/' . $l['file']; $ukuran = ukuran_file($file); ?>
+        <?php
+        $file = 'uploads/laporan/' . $l['file'];
+        $ukuran = ukuran_file($file);
+        $format = format_dokumen((string) $l['file']);
+        $mime = match (strtolower(pathinfo((string) $l['file'], PATHINFO_EXTENSION))) {
+            'xlsx'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'xls'   => 'application/vnd.ms-excel',
+            default => 'application/pdf',
+        };
+        ?>
         <li class="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
             <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><?= icon('chart', 'size-5') ?></span>
             <div>
@@ -37,9 +46,10 @@ $this->layout('site', [
                 <?php endif ?>
             </div>
             <?php if ($ukuran !== null): ?>
-            <a href="<?= e(url($file)) ?>" target="_blank" rel="noopener" type="application/pdf"
+            <?php /* PDF dibuka di tab baru; Excel langsung diunduh */ ?>
+            <a href="<?= e(url($file)) ?>"<?= $format === 'PDF' ? ' target="_blank" rel="noopener"' : ' download' ?> type="<?= e($mime) ?>"
                class="col-start-2 inline-flex h-10 items-center gap-1.5 justify-self-start rounded-full border border-gray-300 px-3 text-sm font-semibold text-primary hover:border-primary sm:col-start-auto">
-                <?= icon('download', 'size-4') ?>PDF <span class="font-normal text-muted"><?= e($ukuran) ?></span>
+                <?= icon('download', 'size-4') ?><?= e($format) ?> <span class="font-normal text-muted"><?= e($ukuran) ?></span>
                 <span class="sr-only">— <?= e($l['judul']) ?></span>
             </a>
             <?php endif ?>

@@ -24,6 +24,7 @@ $router->get('/', [HomeController::class, 'index']);
 // Kabar & program
 $router->get('/berita', [PostController::class, 'index']);
 $router->get('/berita/{slug}', [PostController::class, 'show']);
+$router->postTanpaCsrf('/berita/{slug}/dilihat', [PostController::class, 'dilihat']);
 $router->get('/program', [ProgramController::class, 'index']);
 $router->get('/program/{slug}', [ProgramController::class, 'pilar']);
 

@@ -34,6 +34,15 @@ final class Router
     }
 
     /**
+     * POST publik tanpa token CSRF & tanpa sesi, untuk sinyal dari halaman tanpa cookie (mis. penghitung dilihat).
+     * Hanya untuk aksi tanpa data pengguna; controller wajib memeriksa asal permintaan & membatasi laju.
+     */
+    public function postTanpaCsrf(string $path, array|Closure $handler): void
+    {
+        $this->add('POST', $path, $handler, false);
+    }
+
+    /**
      * @param list<class-string<Middleware>> $middleware
      * @param Closure(self): void $routes
      */
@@ -76,7 +85,9 @@ final class Router
                 if ($request->melebihiBatasPost()) {
                     throw new HttpException(413);
                 }
-                Csrf::check($request);
+                if ($route['csrf']) {
+                    Csrf::check($request);
+                }
             }
             $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
 
@@ -104,7 +115,7 @@ final class Router
         return $response instanceof Response ? $response : null;
     }
 
-    private function add(string $method, string $path, array|Closure $handler): void
+    private function add(string $method, string $path, array|Closure $handler, bool $csrf = true): void
     {
         $path  = '/' . trim($this->prefix . '/' . trim($path, '/'), '/');
         $regex = '';
@@ -119,6 +130,7 @@ final class Router
             'regex'      => '#^' . $regex . '$#u',
             'handler'    => $handler,
             'middleware' => $this->middleware,
+            'csrf'       => $csrf,
         ];
     }
 

@@ -24,8 +24,10 @@ php tests/http/uji_fase8.php  http://localhost:8002 http://localhost:8003   # ta
 php tests/http/uji_pengguna.php http://localhost:8002     # menu Pengguna: peran, validasi, sesi berakhir saat akun diubah
 php tests/http/uji_distribusi.php http://localhost:8002   # menu Distribusi: CRUD, validasi, statistik dasbor, akses Kepala
 php tests/http/uji_testimoni.php http://localhost:8002    # form testimoni pengunjung: validasi, anti-spam, moderasi admin
-php tests/http/uji_tampilan.php http://localhost:8002     # warna kotak ikon pilar & Ikon Navigasi bawah
-php tests/http/uji_pengumpulan.php http://localhost:8002  # menu Pengumpulan & Perangkat Daerah, statistik dasbor, akses Kepala
+php tests/http/uji_tampilan.php http://localhost:8002     # warna kotak ikon pilar, Ikon Navigasi bawah, kartu Tunaikan Zakat
+php tests/http/uji_pengumpulan.php http://localhost:8002  # menu Pengumpulan & Perangkat Daerah, impor Excel, statistik dasbor, akses Kepala
+php tests/http/uji_dilihat.php http://localhost:8002      # penghitung dilihat berita: asal permintaan, hitung ganda, bot, petugas, batas laju
+php tests/http/uji_laporan.php http://localhost:8002      # laporan keuangan: satu isian PDF atau Excel, validasi isi file, halaman /laporan
 ```
 Setiap skrip diakhiri `SEMUA LULUS` atau daftar `GAGAL`. Berkas sementara di `tests/tmp/` (diabaikan git).
 

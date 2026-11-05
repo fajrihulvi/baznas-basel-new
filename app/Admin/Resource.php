@@ -94,6 +94,12 @@ final class Resource
         return array_map(static fn (string $pola): string => self::isiPola($pola, $baris), $this->def['aksi_baris'] ?? []);
     }
 
+    /** Tombol tambahan di atas daftar ('tombol': label => URL admin), mis. impor Excel. @return array<string, string> */
+    public function tombol(): array
+    {
+        return $this->def['tombol'] ?? [];
+    }
+
     /** Info tambahan di atas daftar (mis. penjelasan cara kerja). */
     public function keterangan(): ?string
     {

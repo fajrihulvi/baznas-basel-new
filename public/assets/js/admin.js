@@ -90,6 +90,7 @@ const TOMBOL = [
   ['blockquote', '“ ”', 'Kutipan', ''],
   ['link', 'Tautan', 'Sisipkan tautan', 'underline'],
   ['unlink', 'Lepas tautan', 'Hapus tautan', ''],
+  ['image', 'Gambar', 'Sisipkan gambar (bisa juga ditempel atau diseret ke editor)', ''],
   ['removeFormat', 'Bersihkan', 'Hapus format', ''],
   ['html', '</>', 'Sunting HTML', 'font-mono'],
 ];
@@ -118,15 +119,105 @@ document.querySelectorAll('textarea[data-editor]').forEach((ta) => {
   let modeHtml = false;
   const sinkron = () => { if (!modeHtml) ta.value = area.innerHTML; };
 
+  // --- Gambar: unggah ke /admin/unggah-gambar lalu sisipkan di posisi kursor ---------
+  const pilihFile = document.createElement('input');
+  pilihFile.type = 'file';
+  pilihFile.accept = 'image/jpeg,image/png,image/webp';
+  pilihFile.hidden = true;
+  let posisi = null; // seleksi terakhir di editor (hilang saat dialog file terbuka)
+  const simpanPosisi = () => {
+    const sel = window.getSelection();
+    if (sel.rangeCount && area.contains(sel.getRangeAt(0).commonAncestorContainer)) posisi = sel.getRangeAt(0).cloneRange();
+  };
+  area.addEventListener('keyup', simpanPosisi);
+  area.addEventListener('mouseup', simpanPosisi);
+  area.addEventListener('input', simpanPosisi);
+
+  const tombolGambar = () => toolbar.querySelector('[data-perintah="image"]');
+  const unggahGambar = async (file) => {
+    if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      window.alert('Format gambar harus JPG, PNG, atau WebP.');
+      return;
+    }
+    const alt = window.prompt('Keterangan singkat gambar (dibacakan pembaca layar & mesin pencari):', '');
+    if (alt === null) return; // dibatalkan
+    const tombol = tombolGambar();
+    tombol.disabled = true;
+    tombol.textContent = 'Mengunggah…';
+    try {
+      const data = new FormData();
+      data.append('gambar', file);
+      const res = await fetch(ta.dataset.unggah, {
+        method: 'POST', body: data, credentials: 'same-origin',
+        headers: { 'X-CSRF-Token': ta.form?.elements._token?.value ?? '', Accept: 'application/json' },
+      });
+      const hasil = await res.json().catch(() => ({}));
+      if (!res.ok || !hasil.src) {
+        throw new Error(hasil.galat || (res.status === 413 ? 'Ukuran gambar terlalu besar.' : res.status === 419 ? 'Sesi kedaluwarsa. Muat ulang halaman (isi yang belum disimpan akan hilang — salin dulu).' : 'Gambar gagal diunggah.'));
+      }
+      const img = document.createElement('img');
+      img.src = hasil.src;
+      img.alt = alt.trim();
+      img.width = hasil.width;
+      img.height = hasil.height;
+      area.focus();
+      const sel = window.getSelection();
+      if (posisi) { sel.removeAllRanges(); sel.addRange(posisi); }
+      if (sel.rangeCount && area.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(img);
+        range.setStartAfter(img);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        const p = document.createElement('p');
+        p.append(img);
+        area.append(p);
+      }
+      sinkron();
+    } catch (err) {
+      window.alert(err.message);
+    } finally {
+      tombol.disabled = false;
+      tombol.textContent = 'Gambar';
+    }
+  };
+  pilihFile.addEventListener('change', () => {
+    unggahGambar(pilihFile.files?.[0]);
+    pilihFile.value = '';
+  });
+  // Tempel (Ctrl+V) atau seret file gambar langsung ke editor
+  area.addEventListener('paste', (e) => {
+    const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'));
+    if (file) { e.preventDefault(); simpanPosisi(); unggahGambar(file); }
+  });
+  area.addEventListener('drop', (e) => {
+    const file = [...(e.dataTransfer?.files ?? [])].find((f) => f.type.startsWith('image/'));
+    if (!file) return;
+    e.preventDefault();
+    const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    if (range) posisi = range;
+    unggahGambar(file);
+  });
+
   TOMBOL.forEach(([perintah, teks, judul, kelas]) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = teks;
     b.title = judul;
     b.setAttribute('aria-label', judul);
-    b.className = `inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm hover:bg-white hover:text-primary ${kelas}`;
+    b.className = `inline-flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm hover:bg-white hover:text-primary disabled:opacity-60 ${kelas}`;
+    b.dataset.perintah = perintah;
     b.addEventListener('mousedown', (e) => e.preventDefault()); // jaga seleksi teks
     b.addEventListener('click', () => {
+      if (perintah === 'image') {
+        if (modeHtml) return;
+        simpanPosisi();
+        pilihFile.click();
+        return;
+      }
       if (perintah === 'html') {
         modeHtml = !modeHtml;
         if (modeHtml) {
@@ -172,7 +263,8 @@ document.querySelectorAll('textarea[data-editor]').forEach((ta) => {
   area.addEventListener('input', sinkron);
   ta.hidden = true;
   ta.before(wadah);
-  wadah.append(toolbar, area, ta);
+  wadah.append(toolbar, area, ta, pilihFile);
+  if (!ta.dataset.unggah) tombolGambar()?.remove();
   ta.classList.add('rounded-none', 'border-0', 'min-h-72');
   ta.form?.addEventListener('submit', sinkron);
 });

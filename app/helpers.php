@@ -289,6 +289,27 @@ function angka(mixed $nilai): int
     return $digit === '' || strlen($digit) > 15 ? 0 : (int) $digit;
 }
 
+/** Label format dokumen dari nama file: "a1b2.pdf" → "PDF", ".xlsx"/".xls" → "Excel". */
+function format_dokumen(string $file): string
+{
+    return match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) {
+        'xlsx', 'xls' => 'Excel',
+        'pdf'         => 'PDF',
+        default       => strtoupper(pathinfo($file, PATHINFO_EXTENSION)),
+    };
+}
+
+/** Nomor HP untuk dibaca: "6282180218241" / "+62 821…" → "0821-8021-8241". */
+function nomor_hp(?string $nomor): string
+{
+    $digit = (string) preg_replace('/\D/', '', (string) $nomor);
+    if (str_starts_with($digit, '62')) {
+        $digit = '0' . substr($digit, 2);
+    }
+
+    return strlen($digit) < 8 ? $digit : implode('-', [substr($digit, 0, 4), substr($digit, 4, 4), substr($digit, 8)]);
+}
+
 /** Pesan error validasi dari submit sebelumnya untuk satu field (Session::flash('errors', [...])). */
 function galat(string $field): ?string
 {

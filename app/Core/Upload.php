@@ -87,6 +87,62 @@ final class Upload
         return $nama;
     }
 
+    /**
+     * Dokumen Excel publik (laporan keuangan): public/uploads/{folder}/{acak}.xlsx|.xls
+     * Dicek dari isinya: .xlsx = arsip ZIP berisi xl/workbook.xml tanpa makro (vbaProject.bin); .xls = berkas OLE lama.
+     */
+    public static function excelPublik(?array $file, string $folder, int $maksByte): string
+    {
+        self::periksa($file, $maksByte);
+        $tmp = $file['tmp_name'];
+        $awal = (string) file_get_contents($tmp, false, null, 0, 8);
+
+        if (str_starts_with($awal, "PK\x03\x04")) {
+            $zip = new \ZipArchive();
+            $buka = $zip->open($tmp, \ZipArchive::RDONLY) === true;
+            $xlsx = $buka && $zip->locateName('xl/workbook.xml') !== false;
+            $makro = $xlsx && ($zip->locateName('xl/vbaProject.bin') !== false || str_contains((string) $zip->getFromName('[Content_Types].xml'), 'macroEnabled'));
+            if ($buka) {
+                $zip->close();
+            }
+            if (!$xlsx) {
+                throw new UploadException('File harus berupa Excel (.xlsx atau .xls).');
+            }
+            if ($makro) {
+                throw new UploadException('Excel bermakro (.xlsm) tidak diterima. Simpan sebagai Buku Kerja Excel (.xlsx) biasa.');
+            }
+            $ext = 'xlsx';
+        } elseif ($awal === "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1") {
+            $ext = 'xls'; // format Excel 97–2003
+        } else {
+            throw new UploadException('File harus berupa Excel (.xlsx atau .xls).');
+        }
+
+        $nama = bin2hex(random_bytes(16)) . '.' . $ext;
+        self::pindahkan($tmp, public_path('uploads/' . $folder . '/' . $nama));
+
+        return $nama;
+    }
+
+    /**
+     * Dokumen publik PDF **atau** Excel dalam satu isian (laporan keuangan). Jenis dikenali dari isi file.
+     *
+     * @return string nama file acak berakhiran .pdf, .xlsx, atau .xls
+     */
+    public static function dokumenPublik(?array $file, string $folder, int $maksByte): string
+    {
+        self::periksa($file, $maksByte);
+        if (file_get_contents($file['tmp_name'], false, null, 0, 5) === '%PDF-') {
+            return self::pdfPublik($file, $folder, $maksByte);
+        }
+        try {
+            return self::excelPublik($file, $folder, $maksByte);
+        } catch (UploadException $e) {
+            // Pesan khusus (mis. Excel bermakro) tetap; selain itu sebutkan kedua format yang diterima
+            throw str_contains($e->getMessage(), 'makro') ? $e : new UploadException('File harus berupa PDF atau Excel (.xlsx/.xls).');
+        }
+    }
+
     /** Hapus file di public/uploads/{folder} beserta varian WebP-nya. */
     public static function hapusPublik(string $folder, ?string $nama): void
     {
@@ -99,6 +155,23 @@ final class Upload
                 unlink($dir . $f);
             }
         }
+    }
+
+    /**
+     * File Excel .xlsx untuk diimpor (tidak disimpan — hanya dibaca dari folder sementara PHP).
+     * Dicek dari isinya: arsip ZIP ("PK\x03\x04"), bukan dari nama/ekstensi kiriman browser.
+     *
+     * @return string path file sementara yang aman dibaca
+     */
+    public static function excel(?array $file, int $maksByte): string
+    {
+        $mime = self::periksa($file, $maksByte);
+        $zip = in_array($mime, ['application/zip', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/octet-stream'], true);
+        if (!$zip || file_get_contents($file['tmp_name'], false, null, 0, 4) !== "PK\x03\x04") {
+            throw new UploadException('Format file harus Excel .xlsx (bukan .xls atau .csv). Di Excel: File → Simpan Sebagai → Buku Kerja Excel (.xlsx).');
+        }
+
+        return $file['tmp_name'];
     }
 
     public static function siapkanFolder(string $folder): void

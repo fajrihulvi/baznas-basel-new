@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 $base = rtrim($argv[1] ?? 'http://localhost:8002', '/');
 $proyek = dirname(__DIR__, 2);
+$buktiAwal = count(glob("$proyek/storage/bukti/*/*/*") ?: []); // bukti asli milik pengguna lokal tidak boleh dihitung/disentuh
 $tmp = dirname(__DIR__) . '/tmp';
 @mkdir($tmp);
 $jar = "$tmp/cookie.txt";
@@ -118,7 +119,7 @@ $tolak('kode tidak dikenal ditolak', $isian($jpg, 'image/jpeg', ['kode' => 'QQQQ
 $tolak('tanggal transfer di masa depan ditolak', $isian($jpg, 'image/jpeg', ['tgl_transfer' => date('Y-m-d', strtotime('+3 days'))]), 'tidak boleh melewati hari ini');
 $r = req('POST', "$base/konfirmasi", $isian($sangatBesar, 'application/octet-stream'), true);
 $cek('body > post_max_size → 413 (bukan 419)', $r['kode'] === 413, (string) $r['kode']);
-$cek('tidak ada file tersimpan dari percobaan ditolak', count(glob("$proyek/storage/bukti/*/*/*") ?: []) === 0);
+$cek('tidak ada file tersimpan dari percobaan ditolak', count(glob("$proyek/storage/bukti/*/*/*") ?: []) === $buktiAwal);
 
 foreach (glob("$proyek/storage/cache/rl-*.json") ?: [] as $x) { unlink($x); }
 $r = req('POST', "$base/konfirmasi", $isian($jpg, 'image/jpeg'), true);

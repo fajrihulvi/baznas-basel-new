@@ -1,5 +1,5 @@
 <?php
-// Uji warna/transparansi kotak ikon 5 pilar + Ikon Navigasi bawah (admin → situs). Pemakaian: php tests/http/uji_tampilan.php http://localhost:8002
+// Uji warna/transparansi kotak ikon 5 pilar + Ikon Navigasi bawah + kartu Tunaikan Zakat (admin → situs). Pemakaian: php tests/http/uji_tampilan.php http://localhost:8002
 declare(strict_types=1);
 
 $base = rtrim($argv[1] ?? 'http://localhost:8002', '/');
@@ -11,6 +11,10 @@ $hapusCache = function () use ($proyek): void { foreach ([...glob("$proyek/stora
 
 // Simpan keadaan awal (dipulihkan di akhir)
 $pilarAwal = $pdo->query('SELECT * FROM kategori_program WHERE id_kategori_program = 1')->fetch();
+$layananAwal = $pdo->query('SELECT * FROM layanan WHERE id = 1')->fetch();
+$waAwal = $pdo->query("SELECT nilai FROM setting WHERE kunci = 'whatsapp'")->fetchColumn();
+$halamanAwal = $pdo->query('SELECT * FROM halaman WHERE id = 1')->fetch();
+$mulaiUji = time() - 1;
 $navAwal = $pdo->query('SELECT * FROM ikon_nav')->fetchAll();
 $PASS = 'Uji-Tampilan-' . bin2hex(random_bytes(3));
 $pdo->exec("DELETE FROM user WHERE username = 'uji_tp_admin'");
@@ -94,18 +98,91 @@ try {
     preg_match('#<nav aria-label="Navigasi bawah".*?</nav>#s', req($jP, 'GET', "$base/")['body'], $nav);
     $cek('hapus gambar → kembali ke SVG bawaan, berkas & varian terhapus', $r['kode'] === 303 && $sisa === null && !str_contains($nav[0] ?? '', 'ikon-nav/')
         && glob("$proyek/public/uploads/ikon-nav/" . substr($ikon, 0, -4) . '*') === []);
+    $nav = $nav[0] ?? '';
+    $cek('bottom nav: bilah 80px, ikon 48px (2×), Bayar Zakat 80px & label dua baris', str_contains($nav, 'grid h-20') && substr_count($nav, 'size-12') >= 4
+        && str_contains($nav, 'size-20') && str_contains($nav, 'Bayar<br>Zakat'));
+    $cek('body memberi ruang 5rem untuk bilah bawah', str_contains(req($jP, 'GET', "$base/")['body'], 'pb-[calc(5rem+env(safe-area-inset-bottom))]'));
+
+    echo "\n== Tunaikan Zakat (beranda)\n";
+    $pdo->exec("INSERT INTO layanan (judul, deskripsi, link, urutan, publish) VALUES ('UJI-TP Kartu kelima', 'x', '/bayar-zakat', 99, 'Y')");
+    $pdo->exec("UPDATE setting SET nilai = '6281234567890' WHERE kunci = 'whatsapp'");
+    $hapusCache();
+    $u = req($jA, 'GET', "$base/admin/layanan/1/ubah");
+    $cek('form admin: Gambar, Judul, Deskripsi singkat, Tautan', str_contains($u['body'], 'name="gambar"') && str_contains($u['body'], 'name="judul"') && str_contains($u['body'], 'name="deskripsi"') && str_contains($u['body'], 'name="link"'));
+    $g = imagecreatetruecolor(800, 600); imagefill($g, 0, 0, imagecolorallocate($g, 11, 107, 58)); imagejpeg($g, "$tmp/layanan-uji.jpg");
+    $l1 = $pdo->query('SELECT * FROM layanan WHERE id = 1')->fetch();
+    $r = req($jA, 'POST', "$base/admin/layanan/1", ['_token' => token($u['body']), 'judul' => $l1['judul'], 'deskripsi' => (string) $l1['deskripsi'], 'link' => $l1['link'],
+        'urutan' => (string) $l1['urutan'], 'publish' => '1', 'gambar' => new CURLFile("$tmp/layanan-uji.jpg", 'image/jpeg', 'kartu.jpg')]);
+    $gambar = (string) $pdo->query('SELECT gambar FROM layanan WHERE id = 1')->fetchColumn();
+    $cek('unggah gambar kartu → uploads/layanan, ukuran tersimpan 800×600', $r['kode'] === 303 && $gambar !== '' && is_file("$proyek/public/uploads/layanan/$gambar")
+        && (int) $pdo->query('SELECT gambar_w FROM layanan WHERE id = 1')->fetchColumn() === 800, $r['lokasi']);
+    $h = req($jP, 'GET', "$base/")['body'];
+    preg_match('#aria-labelledby="judul-layanan".*?</section>#s', $h, $sek);
+    $sek = $sek[0] ?? '';
+    $cek('beranda: tepat 4 kartu (kartu ke-5 tidak tampil), tanpa ikon lama', substr_count($sek, '<article') === 4 && !str_contains($sek, 'UJI-TP Kartu kelima') && !str_contains($sek, 'bg-accent/20'));
+    $cek('gambar tampil di atas judul kartu pertama', (bool) preg_match('#<article.*?uploads/layanan/' . preg_quote(substr($gambar, 0, -4), '#') . '.*?<h3#s', $sek));
+    $cek('Jemput Zakat: nomor & tautan WhatsApp dari Pengaturan', str_contains($sek, 'WhatsApp <span class="whitespace-nowrap">0812-3456-7890</span>') && str_contains($sek, 'https://wa.me/6281234567890?text='));
+
+    preg_match('#<section id="mitra".*?</section>#s', $h, $mitra);
+    $mitra = $mitra[0] ?? '';
+    $cek('Mitra Kami: logo berwarna asli (tanpa grayscale), zoom in saat disorot', $mitra !== '' && !str_contains($mitra, 'grayscale')
+        && str_contains($mitra, 'group-hover:scale-120') && str_contains($mitra, 'overflow-hidden'));
+
+    echo "\n== Gambar di isi editor (Halaman)\n";
+    $u = req($jA, 'GET', "$base/admin/halaman/1/ubah");
+    $cek('editor isi: textarea membawa alamat unggah gambar', str_contains($u['body'], 'data-editor data-unggah="' . $base . '/admin/unggah-gambar"'));
+    $unggah = function (string $file, string $mime, ?string $tok) use ($jA, $base): array {
+        $ch = curl_init("$base/admin/unggah-gambar");
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_COOKIEJAR => $jA, CURLOPT_COOKIEFILE => $jA, CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => ['gambar' => new CURLFile($file, $mime, basename($file))], CURLOPT_HTTPHEADER => $tok !== null ? ["X-CSRF-Token: $tok", 'Accept: application/json'] : ['Accept: application/json']]);
+        $body = (string) curl_exec($ch);
+        return ['kode' => curl_getinfo($ch, CURLINFO_RESPONSE_CODE), 'json' => json_decode($body, true) ?? []];
+    };
+    $g = imagecreatetruecolor(1600, 900); imagefill($g, 0, 0, imagecolorallocate($g, 235, 104, 52)); imagejpeg($g, "$tmp/isi-uji.jpg");
+    file_put_contents("$tmp/bukan-gambar.jpg", '<?php echo 1;');
+    $r = $unggah("$tmp/isi-uji.jpg", 'image/jpeg', null);
+    $cek('unggah tanpa token CSRF → 419', $r['kode'] === 419);
+    $r = $unggah("$tmp/bukan-gambar.jpg", 'image/jpeg', token($u['body']));
+    $cek('file bukan gambar (berkedok .jpg) → 422 + pesan', $r['kode'] === 422 && str_contains((string) ($r['json']['galat'] ?? ''), 'Format gambar'));
+    $r = $unggah("$tmp/isi-uji.jpg", 'image/jpeg', token($u['body']));
+    $src = (string) ($r['json']['src'] ?? '');
+    $cek('unggah gambar → JSON src varian WebP 1200 px (tanpa domain), 1200×675', $r['kode'] === 200 && preg_match('#^/uploads/konten/[a-f0-9]{32}-1200\.webp$#', $src) === 1
+        && ($r['json']['width'] ?? 0) === 1200 && ($r['json']['height'] ?? 0) === 675 && is_file("$proyek/public$src"), $src);
+    $isi = '<p>Paragraf uji.</p><p><img src="' . $src . '" alt="Foto uji" width="1200" height="675"></p>';
+    $r = req($jA, 'POST', "$base/admin/halaman/1", ['_token' => token($u['body']), 'judul' => $halamanAwal['judul'], 'grup' => $halamanAwal['grup'], 'konten' => $isi,
+        'slug' => $halamanAwal['slug'], 'urutan' => (string) $halamanAwal['urutan'], 'publish' => $halamanAwal['publish'] === 'Y' ? '1' : '']);
+    $tersimpan = (string) $pdo->query('SELECT konten FROM halaman WHERE id = 1')->fetchColumn();
+    $cek('isi halaman tersimpan dengan <img> (lolos sanitasi, alt & ukuran tetap)', $r['kode'] === 303 && str_contains($tersimpan, 'src="' . $src . '"') && str_contains($tersimpan, 'alt="Foto uji"') && str_contains($tersimpan, 'width="1200"'));
+    $hal = req($jP, 'GET', "$base/" . ($halamanAwal['grup'] === 'tentang' ? 'tentang' : 'halaman') . '/' . $halamanAwal['slug']);
+    $cek('halaman publik menampilkan gambar (lazy)', $hal['kode'] === 200 && (bool) preg_match('#<img[^>]*src="' . preg_quote($src, '#') . '"[^>]*>#', $hal['body']) && str_contains($hal['body'], 'loading="lazy"'));
 
     echo "\n== Akses\n";
     $pdo->exec("UPDATE user SET level = 3 WHERE username = 'uji_tp_admin'");
     @unlink($jA); $f = req($jA, 'GET', "$base/admin/masuk");
     req($jA, 'POST', "$base/admin/masuk", ['_token' => token($f['body']), 'username' => 'uji_tp_admin', 'password' => $PASS]);
     $cek('Kepala: /admin/ikon-navigasi → 403', req($jA, 'GET', "$base/admin/ikon-navigasi")['kode'] === 403);
+    $cek('Kepala: unggah gambar isi → 403', $unggah("$tmp/isi-uji.jpg", 'image/jpeg', token(req($jA, 'GET', "$base/admin")['body']) ?: 'x')['kode'] === 403);
 } finally {
     $st = $pdo->prepare('UPDATE kategori_program SET warna_latar = ?, opasitas_latar = ?, label = ?, kategori_program = ?, deskripsi = ?, urutan = ? WHERE id_kategori_program = 1');
     $st->execute([$pilarAwal['warna_latar'], $pilarAwal['opasitas_latar'], $pilarAwal['label'], $pilarAwal['kategori_program'], $pilarAwal['deskripsi'], $pilarAwal['urutan']]);
     $st = $pdo->prepare('UPDATE ikon_nav SET label = ?, ikon = ? WHERE id = ?');
     foreach ($navAwal as $n) { $st->execute([$n['label'], $n['ikon'], $n['id']]); }
     $pdo->exec("DELETE FROM user WHERE username = 'uji_tp_admin'");
+    $pdo->exec("DELETE FROM layanan WHERE judul LIKE 'UJI-TP %'");
+    $pdo->prepare("UPDATE setting SET nilai = ? WHERE kunci = 'whatsapp'")->execute([$waAwal]);
+    $sisaGambar = (string) $pdo->query('SELECT gambar FROM layanan WHERE id = 1')->fetchColumn();
+    if ($sisaGambar !== '' && $sisaGambar !== (string) $layananAwal['gambar']) {
+        foreach (glob("$proyek/public/uploads/layanan/" . pathinfo($sisaGambar, PATHINFO_FILENAME) . '*') ?: [] as $berkas) unlink($berkas);
+    }
+    $pdo->prepare('UPDATE layanan SET gambar = ?, gambar_w = ?, gambar_h = ? WHERE id = 1')->execute([$layananAwal['gambar'], $layananAwal['gambar_w'], $layananAwal['gambar_h']]);
+    @rmdir("$proyek/public/uploads/layanan"); // hanya terhapus bila kosong
+    @unlink("$tmp/layanan-uji.jpg");
+    $pdo->prepare('UPDATE halaman SET konten = ? WHERE id = 1')->execute([$halamanAwal['konten']]);
+    foreach (glob("$proyek/public/uploads/konten/*") ?: [] as $berkas) {
+        if (filemtime($berkas) >= $mulaiUji) unlink($berkas); // hanya berkas yang dibuat uji ini
+    }
+    @rmdir("$proyek/public/uploads/konten");
+    @unlink("$tmp/isi-uji.jpg"); @unlink("$tmp/bukan-gambar.jpg");
     $dipakai = array_filter(array_column($navAwal, 'ikon'));
     foreach (glob("$proyek/public/uploads/ikon-nav/*") ?: [] as $berkas) {
         if (!array_filter($dipakai, static fn ($x) => str_starts_with(basename($berkas), substr((string) $x, 0, -4)))) unlink($berkas);

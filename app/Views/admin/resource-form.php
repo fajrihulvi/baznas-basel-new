@@ -12,7 +12,7 @@ $baru = $baris === null;
 $judul = ($baru ? 'Tambah ' : 'Ubah ') . $r->tunggal();
 $this->layout('admin', ['title' => $judul]);
 $aksi = $baru ? 'admin/' . $r->kunci : 'admin/' . $r->kunci . '/' . (int) $baris[$r->pk()];
-$adaFile = (bool) array_filter($r->field(), static fn (array $f): bool => in_array($f['tipe'], ['gambar', 'pdf'], true));
+$adaFile = (bool) array_filter($r->field(), static fn (array $f): bool => in_array($f['tipe'], App\Controllers\Admin\ResourceController::TIPE_FILE, true));
 ?>
 <nav aria-label="Breadcrumb" class="text-sm text-muted">
     <a href="<?= e(url('admin/' . $r->kunci)) ?>" class="hover:text-primary hover:underline"><?= e($r->judul()) ?></a> › <span aria-current="page"><?= e($judul) ?></span>

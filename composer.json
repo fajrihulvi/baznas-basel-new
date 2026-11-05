@@ -9,7 +9,9 @@
         "ext-gd": "*",
         "ext-fileinfo": "*",
         "ext-mbstring": "*",
-        "ext-pdo": "*"
+        "ext-pdo": "*",
+        "ext-simplexml": "*",
+        "ext-zip": "*"
     },
     "autoload": {
         "psr-4": {

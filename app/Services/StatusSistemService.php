@@ -16,7 +16,7 @@ use Throwable;
 final class StatusSistemService
 {
     /** Ekstensi PHP yang dipakai aplikasi. */
-    private const EKSTENSI = ['pdo_mysql' => 'Database', 'mbstring' => 'Teks UTF-8', 'gd' => 'Olah gambar', 'fileinfo' => 'Cek jenis file unggahan', 'dom' => 'Sanitasi HTML editor'];
+    private const EKSTENSI = ['pdo_mysql' => 'Database', 'mbstring' => 'Teks UTF-8', 'gd' => 'Olah gambar', 'fileinfo' => 'Cek jenis file unggahan', 'dom' => 'Sanitasi HTML editor', 'zip' => 'Impor/unduh Excel pengumpulan', 'simplexml' => 'Baca file Excel'];
 
     /** Folder yang harus bisa ditulis PHP. */
     private const FOLDER_TULIS = ['storage/cache', 'storage/logs', 'storage/bukti']; // + folder uploads di document root

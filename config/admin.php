@@ -7,11 +7,11 @@ declare(strict_types=1);
  * Nama tabel/kolom & SQL di sini adalah konfigurasi tepercaya (bukan input pengguna).
  *
  * Tipe field: teks, panjang (textarea), html (editor + HtmlSanitizer), angka, rupiah (diketik 1.500.000), tanggal, pilihan,
- *             publish (Y/N), centang (1/0), slug (otomatis dari 'dari'), gambar (+ varian WebP), pdf.
+ *             publish (Y/N), centang (1/0), slug (otomatis dari 'dari'), gambar (+ varian WebP), pdf, dokumen (PDF atau Excel .xlsx/.xls tanpa makro).
  * 'pilihan'  : array nilai => label, atau 'sumber' = SQL "SELECT nilai, label …".
  * 'boleh_kosong' (angka): kosong disimpan NULL, bukan 0. 'geser' (angka): [min, maks, langkah, awal] → penggeser %.
  * Tipe 'warna': pemilih warna #rrggbb + centang "pakai warna bawaan" (NULL); 'pratinjau' => ['opasitas' => field, 'ikon' => [field, folder]].
- * 'kolom'    : kolom di daftar => tipe tampilan (teks|gambar|publish|tanggal|pilihan|centang|rupiah).
+ * 'kolom'    : kolom di daftar => tipe tampilan (teks|gambar|publish|tanggal|pilihan|centang|rupiah|bulan|format|angka).
  * 'cache'    : kunci cache yang dihapus setelah simpan/hapus (home, site, zakat, sitemap).
  * 'aksi'     : default ['tambah', 'ubah', 'hapus'].
  * 'hook'     : kelas App\Admin\Hook untuk aturan khusus.
@@ -25,7 +25,7 @@ $polaTautan = 'regex:#^(/(?!/)|https?://|mailto:|tel:)#i';
 
 return [
     'menu' => [
-        'Zakat'     => ['pembayaran' => 'Pembayaran', 'rekening' => 'Rekening', 'zakat' => 'Penjelasan Zakat', 'layanan' => 'Layanan Beranda'],
+        'Zakat'     => ['pembayaran' => 'Pembayaran', 'rekening' => 'Rekening', 'zakat' => 'Penjelasan Zakat', 'layanan' => 'Tunaikan Zakat (Beranda)'],
         'Pengumpulan' => ['pengumpulan' => 'Pengumpulan', 'perangkat-daerah' => 'Perangkat Daerah'],
         'Penyaluran' => ['distribusi' => 'Distribusi'],
         'Konten'    => ['post' => 'Kabar & Kegiatan', 'banner' => 'Banner', 'video' => 'Video', 'galeri' => 'Galeri', 'testimoni' => 'Testimoni', 'mitra' => 'Mitra'],
@@ -44,7 +44,8 @@ return [
         'post' => [
             'judul' => 'Kabar & Kegiatan', 'tunggal' => 'kabar', 'tabel' => 'post', 'pk' => 'id',
             'urut' => 'tgl DESC, id DESC', 'cari' => ['judul'],
-            'kolom' => ['foto' => 'gambar', 'judul' => 'teks', 'jenis' => 'pilihan', 'tgl' => 'tanggal', 'is_featured' => 'centang', 'publish' => 'publish'],
+            'kolom' => ['foto' => 'gambar', 'judul' => 'teks', 'jenis' => 'pilihan', 'tgl' => 'tanggal', 'views' => 'angka', 'is_featured' => 'centang', 'publish' => 'publish'],
+            'label_kolom' => ['views' => 'Dilihat'],
             'tautan' => '/berita/{slug}',
             'field' => [
                 'judul'          => ['tipe' => 'teks', 'label' => 'Judul', 'aturan' => 'required|min:5|max:200'],
@@ -82,14 +83,19 @@ return [
             'cache' => ['home'],
         ],
 
+        // Kartu "Tunaikan Zakat" di beranda: hanya 4 teratas (urutan) yang tampil (App\Models\Layanan::MAKS_BERANDA)
         'layanan' => [
-            'judul' => 'Layanan Beranda', 'tunggal' => 'layanan', 'tabel' => 'layanan', 'pk' => 'id',
-            'urut' => 'urutan, id', 'cari' => ['judul'],
-            'kolom' => ['judul' => 'teks', 'link' => 'teks', 'urutan' => 'teks', 'publish' => 'publish'],
+            'judul' => 'Tunaikan Zakat (Beranda)', 'tunggal' => 'kartu', 'tabel' => 'layanan', 'pk' => 'id',
+            'urut' => "publish = 'N', urutan, id", 'cari' => ['judul'],
+            'keterangan' => 'Kartu di bagian "Tunaikan Zakat" beranda. Hanya 4 kartu tampil (urutan terkecil yang ditampilkan). Tautan WhatsApp (https://wa.me/…) otomatis memakai nomor WhatsApp di Pengaturan, dan nomornya ditampilkan di kartu.',
+            'kolom' => ['gambar' => 'gambar', 'judul' => 'teks', 'link' => 'teks', 'urutan' => 'teks', 'publish' => 'publish'],
             'field' => [
+                'gambar'    => ['tipe' => 'gambar', 'label' => 'Gambar', 'folder' => 'layanan', 'kolom_w' => 'gambar_w', 'kolom_h' => 'gambar_h',
+                                'hint' => 'Tampil di atas judul. Persegi (1:1), 800 × 800 px. Gambar yang tidak persegi dipotong bagian tengahnya. Kosongkan bila tanpa gambar.'],
                 'judul'     => ['tipe' => 'teks', 'label' => 'Judul', 'aturan' => 'required|max:100'],
-                'deskripsi' => ['tipe' => 'panjang', 'label' => 'Deskripsi singkat', 'aturan' => 'nullable|max:200'],
-                'link'      => ['tipe' => 'teks', 'label' => 'Tautan', 'aturan' => ['required', 'max:255', $polaTautan], 'hint' => 'Mis. /bayar-zakat, /rekening, atau https://wa.me/62…'],
+                'deskripsi' => ['tipe' => 'panjang', 'label' => 'Deskripsi singkat', 'aturan' => 'nullable|max:200', 'hint' => 'Maksimal ±3 baris di kartu.'],
+                'link'      => ['tipe' => 'teks', 'label' => 'Tautan "Selengkapnya"', 'aturan' => ['required', 'max:255', $polaTautan],
+                                'hint' => 'Mis. /bayar-zakat, /rekening, atau https://wa.me/?text=… (nomor diambil dari Pengaturan → WhatsApp).'],
                 'urutan'    => $urutan,
                 'publish'   => $publish,
             ],
@@ -121,8 +127,9 @@ return [
         'pengumpulan' => [
             'judul' => 'Pengumpulan', 'tunggal' => 'pengumpulan', 'tabel' => 'pengumpulan', 'pk' => 'id',
             'urut' => 'periode DESC, tgl DESC, id DESC', 'cari' => ['keterangan', 'petugas'],
+            'tombol' => ['Unduh format Excel' => '/admin/pengumpulan/format-impor', 'Impor Excel' => '/admin/pengumpulan/impor'],
             'cari_sql' => ['id_perangkat_daerah IN (SELECT id FROM perangkat_daerah WHERE nama LIKE ? OR singkatan LIKE ?)'],
-            'keterangan' => 'Setoran zakat, infaq/sedekah, dan DSKL dari Perangkat Daerah per bulan. Satu setoran boleh berisi satu, dua, atau ketiga jenis sekaligus. Total & grafiknya tampil di Dasbor (juga untuk akun Kepala). Cari menurut nama atau singkatan PD.',
+            'keterangan' => 'Setoran zakat, infaq/sedekah, dan DSKL dari Perangkat Daerah per bulan. Satu setoran boleh berisi satu, dua, atau ketiga jenis sekaligus. Total & grafiknya tampil di Dasbor (juga untuk akun Kepala). Cari menurut nama atau singkatan PD. Setoran banyak PD sekaligus: Unduh format Excel → isi → Impor Excel.',
             'kolom' => ['id' => 'teks', 'periode' => 'bulan', 'id_perangkat_daerah' => 'pilihan', 'zakat' => 'rupiah', 'infaq' => 'rupiah', 'dskl' => 'rupiah', 'total' => 'rupiah'],
             // Di daftar cukup singkatan PD agar kolom nominal & tombol aksi tidak terdesak
             'sumber_kolom' => ['id_perangkat_daerah' => "SELECT id, COALESCE(NULLIF(TRIM(singkatan), ''), nama) FROM perangkat_daerah"],
@@ -355,12 +362,14 @@ return [
         'laporan' => [
             'judul' => 'Laporan Keuangan', 'tunggal' => 'laporan', 'tabel' => 'laporan_keuangan', 'pk' => 'id_laporan_keuangan',
             'urut' => 'tahun DESC, tgl DESC, id_laporan_keuangan DESC', 'cari' => ['judul'],
-            'kolom' => ['judul' => 'teks', 'tahun' => 'teks', 'tgl' => 'tanggal', 'publish' => 'publish'],
+            'keterangan' => 'Laporan tampil di halaman /laporan untuk diunduh publik. File boleh PDF atau Excel.',
+            'kolom' => ['judul' => 'teks', 'tahun' => 'teks', 'tgl' => 'tanggal', 'file' => 'format', 'publish' => 'publish'],
+            'label_kolom' => ['file' => 'Format'],
             'field' => [
                 'judul'   => ['tipe' => 'teks', 'label' => 'Judul', 'aturan' => 'required|max:255', 'hint' => 'Mis. Laporan Keuangan Tahun 2025 (Audited).'],
                 'tahun'   => ['tipe' => 'angka', 'label' => 'Tahun', 'aturan' => 'required|between:2000,2100'],
                 'tgl'     => ['tipe' => 'tanggal', 'label' => 'Tanggal terbit', 'aturan' => 'nullable|date'],
-                'file'    => ['tipe' => 'pdf', 'label' => 'File PDF', 'folder' => 'laporan', 'wajib' => true],
+                'file'    => ['tipe' => 'dokumen', 'label' => 'File laporan (PDF atau Excel)', 'folder' => 'laporan', 'wajib' => true],
                 'publish' => $publish,
             ],
             'cache' => [],

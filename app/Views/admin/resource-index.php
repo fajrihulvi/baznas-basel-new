@@ -16,9 +16,14 @@ $px = count($r->kolom()) >= 7 ? 'px-3' : 'px-4'; // tabel berkolom banyak: sel l
 ?>
 <div class="flex flex-wrap items-center gap-3">
     <h1 class="text-2xl font-bold"><?= e($r->judul()) ?></h1>
-    <?php if ($r->boleh('tambah')): ?>
-    <?= $this->insert('components/button', ['label' => 'Tambah ' . $r->tunggal(), 'href' => '/admin/' . $r->kunci . '/baru', 'size' => 'sm', 'class' => 'ml-auto']) ?>
-    <?php endif ?>
+    <div class="ml-auto flex flex-wrap gap-2">
+        <?php foreach ($r->tombol() as $label => $tujuan): ?>
+        <?= $this->insert('components/button', ['label' => $label, 'href' => $tujuan, 'size' => 'sm', 'variant' => 'outline']) ?>
+        <?php endforeach ?>
+        <?php if ($r->boleh('tambah')): ?>
+        <?= $this->insert('components/button', ['label' => 'Tambah ' . $r->tunggal(), 'href' => '/admin/' . $r->kunci . '/baru', 'size' => 'sm']) ?>
+        <?php endif ?>
+    </div>
 </div>
 
 <?php if ($r->keterangan()): ?>
@@ -64,6 +69,10 @@ $px = count($r->kolom()) >= 7 ? 'px-3' : 'px-4'; // tabel berkolom banyak: sel l
                     <?= $nilai ? '<span class="font-semibold text-primary">Ya</span>' : '<span class="text-muted">—</span>' ?>
                     <?php elseif ($tipe === 'tanggal'): ?>
                     <span class="whitespace-nowrap"><?= e(tgl_id($nilai)) ?></span>
+                    <?php elseif ($tipe === 'angka'): ?>
+                    <span style="font-variant-numeric: tabular-nums"><?= e(number_format((int) $nilai, 0, ',', '.')) ?></span>
+                    <?php elseif ($tipe === 'format'): ?>
+                    <?= $nilai ? '<span class="inline-flex rounded-full bg-surface px-2.5 py-0.5 text-xs font-semibold text-ink">' . e(format_dokumen((string) $nilai)) . '</span>' : '<span class="text-muted">—</span>' ?>
                     <?php elseif ($tipe === 'bulan'): ?>
                     <span class="whitespace-nowrap font-semibold text-ink"><?= e(App\Models\Pengumpulan::namaPeriode($nilai)) ?></span>
                     <?php elseif ($tipe === 'rupiah' && $nilai === null): ?>

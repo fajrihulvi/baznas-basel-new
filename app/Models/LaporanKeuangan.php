@@ -8,6 +8,7 @@ use App\Core\Database;
 
 final class LaporanKeuangan
 {
+    /** @return list<array{id: int, judul: string, file: string, tahun: ?string, tgl: ?string}> file = PDF atau Excel (.xlsx/.xls) */
     public static function terbit(): array
     {
         return Database::fetchAll(

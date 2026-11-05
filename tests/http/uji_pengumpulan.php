@@ -29,13 +29,43 @@ function req(string $jar, string $method, string $url, array $data = []): array
 {
     $ch = curl_init($url);
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true, CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar, CURLOPT_TIMEOUT => 60]);
-    if ($method === 'POST') { curl_setopt($ch, CURLOPT_POST, true); curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data)); }
+    if ($method === 'POST') { curl_setopt($ch, CURLOPT_POST, true); curl_setopt($ch, CURLOPT_POSTFIELDS, array_filter($data, fn ($x) => $x instanceof CURLFile) ? $data : http_build_query($data)); }
     $raw = (string) curl_exec($ch);
     $hs = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
     $r = ['kode' => curl_getinfo($ch, CURLINFO_RESPONSE_CODE), 'body' => substr($raw, $hs), 'head' => substr($raw, 0, $hs)];
     preg_match('/^location:\s*(\S+)/mi', $r['head'], $m);
     $r['lokasi'] = $m[1] ?? '';
     return $r;
+}
+/** Buat .xlsx gaya Excel (sharedStrings, angka, tanggal seri) untuk diunggah. @param list<list<mixed>> $baris */
+function buatXlsx(string $path, array $baris): void
+{
+    $ss = []; $xml = '';
+    foreach ($baris as $r => $sel) {
+        $xml .= '<row r="' . ($r + 1) . '">';
+        foreach ($sel as $c => $v) {
+            $ref = chr(65 + $c) . ($r + 1);
+            if ($v === null) continue;
+            if ($v instanceof DateTimeImmutable) {
+                $xml .= '<c r="' . $ref . '"><v>' . (new DateTimeImmutable('1899-12-30'))->diff($v)->days . '</v></c>';
+            } elseif (is_int($v) || is_float($v)) {
+                $xml .= '<c r="' . $ref . '"><v>' . $v . '</v></c>';
+            } else {
+                $ss[] = $v;
+                $xml .= '<c r="' . $ref . '" t="s"><v>' . (count($ss) - 1) . '</v></c>';
+            }
+        }
+        $xml .= '</row>';
+    }
+    $z = new ZipArchive(); @unlink($path); $z->open($path, ZipArchive::CREATE);
+    $z->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>');
+    $z->addFromString('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+    $z->addFromString('xl/workbook.xml', '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" sheetId="1" r:id="rId7"/></sheets></workbook>');
+    $z->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="/xl/worksheets/lembar9.xml"/></Relationships>');
+    $z->addFromString('xl/sharedStrings.xml', '<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        . implode('', array_map(fn ($t) => '<si><t>' . htmlspecialchars($t, ENT_XML1) . '</t></si>', $ss)) . '</sst>');
+    $z->addFromString('xl/worksheets/lembar9.xml', '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' . $xml . '</sheetData></worksheet>');
+    $z->close();
 }
 function token(string $html): string { preg_match('/name="_token" value="([a-f0-9]{64})"/', $html, $m); return $m[1] ?? ''; }
 function masuk(string $base, string $jar, string $u, string $p): void
@@ -168,6 +198,68 @@ try {
     $cek('kepala: /admin/pengumpulan & /admin/perangkat-daerah → 403', req($jK, 'GET', "$base/admin/pengumpulan")['kode'] === 403 && req($jK, 'GET', "$base/admin/perangkat-daerah/baru")['kode'] === 403);
     $r = req($jK, 'POST', "$base/admin/pengumpulan/{$a['id']}/hapus", ['_token' => token($dk['body'])]);
     $cek('kepala: hapus pengumpulan → 403, data tetap', $r['kode'] === 403 && $pdo->query("SELECT COUNT(*) FROM pengumpulan WHERE id = {$a['id']}")->fetchColumn() == 1);
+
+    echo "\n== Impor Excel\n";
+    $l = req($jA, 'GET', "$base/admin/pengumpulan");
+    $cek('daftar: tombol "Unduh format Excel" & "Impor Excel"', str_contains($l['body'], '/admin/pengumpulan/format-impor') && str_contains($l['body'], '/admin/pengumpulan/impor"'));
+    $fmt = req($jA, 'GET', "$base/admin/pengumpulan/format-impor");
+    file_put_contents("$tmp/pg-format.xlsx", $fmt['body']);
+    $cek('unduh format: .xlsx lampiran', $fmt['kode'] === 200 && str_contains($fmt['head'], 'spreadsheetml.sheet') && str_contains($fmt['head'], 'format-impor-pengumpulan.xlsx') && str_starts_with($fmt['body'], "PK\x03\x04"));
+    $z = new ZipArchive(); $z->open("$tmp/pg-format.xlsx"); $lembar = (string) $z->getFromName('xl/worksheets/sheet1.xml'); $z->close();
+    $cek("format berisi semua PD aktif ($aktif baris), PD nonaktif tidak", substr_count($lembar, '<row ') === 5 + $aktif && str_contains($lembar, 'UJI-PG Dinas Alfa') && !str_contains($lembar, 'UJI-PG Dinas Lama')
+        && str_contains($lembar, 'Kecamatan Toboali') && str_contains($lembar, '>Infaq/Sedekah<'));
+    $jumlahPg = fn () => (int) $pdo->query("SELECT COUNT(*) FROM pengumpulan p JOIN perangkat_daerah d ON d.id = p.id_perangkat_daerah WHERE d.nama LIKE 'UJI-PG %' AND p.periode = '2016-06-01'")->fetchColumn();
+    $impor = function (string $file, array $isian = []) use ($jA, $base): array {
+        $f = req($jA, 'GET', "$base/admin/pengumpulan/impor");
+        $r = req($jA, 'POST', "$base/admin/pengumpulan/impor", $isian + ['_token' => token($f['body']), 'periode_bulan' => '6', 'periode_tahun' => '2016', 'tgl' => '2016-06-10', 'mode' => 'lewati',
+            'berkas' => new CURLFile($file, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'isi.xlsx')]);
+        $ikuti = req($jA, 'GET', str_starts_with($r['lokasi'], 'http') ? $r['lokasi'] : "$base/admin/pengumpulan");
+        return $r + ['lanjut' => $ikuti['body']];
+    };
+    $judul = [['Format Impor'], [], ['No', 'ID', 'Perangkat Daerah', 'Zakat', 'Infaq/Sedekah', 'DSKL', 'Tanggal Pengumpulan', 'Keterangan']];
+    buatXlsx("$tmp/pg-ok.xlsx", [...$judul,
+        [1, $pdA['id'], 'UJI-PG Dinas Alfa', 1500000, '250.000', null, null, 'bukti 01'],
+        [2, null, 'uji-b', null, null, 'Rp500.000,00', new DateTimeImmutable('2016-06-03'), null],
+        [3, $pdo->query("SELECT id FROM perangkat_daerah WHERE nama = 'Setwan' OR singkatan = 'Setwan'")->fetchColumn(), 'Sekretariat DPRD', null, null, null, null, null],
+    ]);
+    $r = $impor("$tmp/pg-ok.xlsx");
+    $ia = $satu("SELECT * FROM pengumpulan WHERE id_perangkat_daerah = {$pdA['id']} AND periode = '2016-06-01'");
+    $ib = $satu("SELECT * FROM pengumpulan WHERE id_perangkat_daerah = {$pdB['id']} AND periode = '2016-06-01'");
+    $cek('impor: 2 setoran tersimpan (cocok lewat ID & singkatan), PD tanpa nominal dilewati', $r['kode'] === 303 && $jumlahPg() === 2
+        && str_contains($teks($r['lanjut']), 'Impor Juni 2016 selesai: 2 setoran tersimpan (Rp2.250.000), 1 PD tanpa nominal tidak dicatat'), $r['lokasi']);
+    $cek('impor: nominal "250.000" & "Rp500.000,00" terbaca, total dihitung', $ia && (int) $ia['zakat'] === 1500000 && (int) $ia['infaq'] === 250000 && $ia['dskl'] === null && (int) $ia['total'] === 1750000
+        && $ib && (int) $ib['dskl'] === 500000);
+    $cek('impor: tanggal kosong → tanggal form; tanggal Excel terbaca; keterangan & petugas', $ia['tgl'] === '2016-06-10' && $ib['tgl'] === '2016-06-03' && $ia['keterangan'] === 'bukti 01' && $ia['petugas'] === 'Petugas Uji');
+    $r = $impor("$tmp/pg-ok.xlsx");
+    $cek('impor ulang (mode lewati): tidak ada data ganda', $jumlahPg() === 2 && str_contains($teks($r['lanjut']), '2 PD dilewati karena sudah punya data bulan ini'));
+    buatXlsx("$tmp/pg-ganti.xlsx", [...$judul, [1, $pdA['id'], 'UJI-PG Dinas Alfa', 2000000, null, null, null, null]]);
+    $r = $impor("$tmp/pg-ganti.xlsx", ['mode' => 'ganti']);
+    $cek('mode ganti: data lama PD diganti isi file', $jumlahPg() === 2 && (int) $pdo->query("SELECT total FROM pengumpulan WHERE id_perangkat_daerah = {$pdA['id']} AND periode = '2016-06-01'")->fetchColumn() === 2000000);
+    $r = $impor("$tmp/pg-ganti.xlsx", ['mode' => 'tambah']);
+    $cek('mode tambah: dicatat sebagai setoran baru', $jumlahPg() === 3);
+
+    buatXlsx("$tmp/pg-salah.xlsx", [...$judul,
+        [1, $pdA['id'], 'UJI-PG Dinas Alfa', 100000, null, null, null, null],
+        [2, null, 'Dinas Tidak Ada', 100000, null, null, null, null],
+        [3, null, 'UJI-PG Dinas Beta', 'seratus ribu', null, null, null, null],
+        [4, $pdA['id'], 'UJI-PG Dinas Alfa', 5000, null, null, null, null],
+        [5, $pdB['id'], 'UJI-PG Dinas Beta', 5000, null, null, date('d/m/Y', strtotime('+5 days')), null],
+    ]);
+    $sebelum = $jumlahPg();
+    $r = $impor("$tmp/pg-salah.xlsx", ['mode' => 'tambah']);
+    $g = $teks($r['lanjut']);
+    $cek('file bermasalah: tidak ada yang tersimpan (semua atau tidak sama sekali)', $jumlahPg() === $sebelum && str_ends_with($r['lokasi'], '/admin/pengumpulan/impor'));
+    $cek('kesalahan per baris: PD tak dikenal, bukan angka, PD ganda, tanggal masa depan', str_contains($g, 'Baris 5: Perangkat Daerah "Dinas Tidak Ada" tidak dikenal')
+        && str_contains($g, 'Baris 6: Zakat bukan angka') && str_contains($g, 'Baris 7: UJI-PG Dinas Alfa sudah ada di baris 4') && str_contains($g, 'Baris 8: Tanggal pengumpulan') && str_contains($g, 'melewati hari ini'));
+    file_put_contents("$tmp/pg-palsu.xlsx", "No,PD,Zakat\n1,Setda,1000\n");
+    $r = $impor("$tmp/pg-palsu.xlsx");
+    $cek('file bukan .xlsx (CSV berganti nama) ditolak', str_contains($teks($r['lanjut']), 'Format file harus Excel .xlsx'));
+    buatXlsx("$tmp/pg-tanpajudul.xlsx", [['Apa saja', 1, 2]]);
+    $cek('file tanpa judul kolom ditolak dengan petunjuk', str_contains($teks($impor("$tmp/pg-tanpajudul.xlsx")['lanjut']), 'Baris judul kolom tidak ditemukan'));
+    $cek('bulan & tahun wajib dipilih', str_contains($teks($impor("$tmp/pg-ok.xlsx", ['periode_bulan' => ''])['lanjut']), 'Bulan dan tahun wajib diisi'));
+    $cek('form impor: field bulan, tanggal, pilihan data lama, file', str_contains(req($jA, 'GET', "$base/admin/pengumpulan/impor")['body'], 'name="mode" value="ganti"'));
+    $cek('kepala: impor & unduh format → 403', req($jK, 'GET', "$base/admin/pengumpulan/impor")['kode'] === 403 && req($jK, 'GET', "$base/admin/pengumpulan/format-impor")['kode'] === 403);
+    foreach (glob("$tmp/pg-*.xlsx") ?: [] as $x) unlink($x);
 
     echo "\n== Relasi & hapus\n";
     $lp = req($jA, 'GET', "$base/admin/perangkat-daerah");

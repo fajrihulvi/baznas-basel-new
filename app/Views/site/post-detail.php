@@ -58,6 +58,10 @@ $bagikan = rawurlencode($post['judul'] . ' — ' . $tautan);
             <?php if (!empty($post['penulis'])): ?>
             <span class="inline-flex items-center gap-1.5"><?= icon('users', 'size-4') ?><?= e($post['penulis']) ?></span>
             <?php endif ?>
+            <?php /* Pembungkus tanpa kelas display: atribut hidden tidak bentrok dengan inline-flex. Disembunyikan selama belum ada yang melihat. */ ?>
+            <span data-dilihat data-id="<?= (int) $post['id'] ?>" data-url="<?= e(url('berita/' . $post['slug'] . '/dilihat')) ?>"<?= (int) $post['views'] === 0 ? ' hidden' : '' ?>>
+                <span class="flex items-center gap-1.5"><?= icon('eye', 'size-4') ?><span>Dilihat <span data-dilihat-jumlah style="font-variant-numeric: tabular-nums"><?= e(number_format((int) $post['views'], 0, ',', '.')) ?></span> orang</span></span>
+            </span>
         </p>
     </header>
 
@@ -102,3 +106,7 @@ $bagikan = rawurlencode($post['judul'] . ' — ' . $tautan);
         </div>
     </div>
 </div>
+
+<?php $this->start('scripts') ?>
+<script type="module" src="<?= e(asset('js/dilihat.js')) ?>"></script>
+<?php $this->stop() ?>

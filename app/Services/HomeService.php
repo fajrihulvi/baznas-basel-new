@@ -43,7 +43,7 @@ final class HomeService
                     'dim'        => self::ukuran('banner', $b['foto']),
                     'dim_mobile' => self::ukuran('banner', $b['foto_mobile']),
                 ], Banner::terbit(5)),
-                'layanan'   => Layanan::terbit(),
+                'layanan'   => Layanan::terbit(Layanan::MAKS_BERANDA),
                 'ticker'    => Post::sorotan(5),
                 'kabar'     => $kabar,
                 'video'     => Video::terbaru(6),

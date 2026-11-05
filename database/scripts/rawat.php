@@ -8,6 +8,7 @@
  * - penghitung percobaan (rl-*.json) yang sudah lewat masanya
  * - log storage/logs/app-*.log lebih tua dari --log-hari (default 90)
  * - catatan tautan rusak yang tidak dibuka lagi > 180 hari
+ * - sidik kunjungan berita hari sebelumnya (post_kunjungan)
  *
  *   php database/scripts/rawat.php --coba     # tampilkan saja, tidak menghapus
  */
@@ -61,6 +62,18 @@ $tautan = $coba
     : Database::execute('DELETE FROM tautan_rusak WHERE terakhir < ?', [$batas]);
 if ($tautan > 0) {
     $ringkas['catatan tautan rusak > 180 hari'] = $tautan;
+}
+
+$hariIni = date('Y-m-d');
+try {
+    $kunjungan = $coba
+        ? (int) Database::fetchColumn('SELECT COUNT(*) FROM post_kunjungan WHERE tgl < ?', [$hariIni])
+        : App\Models\Post::hapusKunjunganLama($hariIni);
+    if ($kunjungan > 0) {
+        $ringkas['sidik kunjungan hari sebelumnya'] = $kunjungan;
+    }
+} catch (PDOException) {
+    // tabel belum ada (migrasi 014 belum dijalankan)
 }
 
 printf("%s%s\n", $coba ? '[COBA — tidak ada yang dihapus] ' : '', date('Y-m-d H:i:s'));

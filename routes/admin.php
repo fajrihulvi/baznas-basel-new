@@ -7,9 +7,11 @@ use App\Controllers\Admin\AuthController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\PembayaranController;
 use App\Controllers\Admin\PenggunaController;
+use App\Controllers\Admin\PengumpulanImporController;
 use App\Controllers\Admin\ResourceController;
 use App\Controllers\Admin\SettingController;
 use App\Controllers\Admin\StatusController;
+use App\Controllers\Admin\UnggahGambarController;
 use App\Core\Router;
 use App\Middleware\AuthAdmin;
 
@@ -42,6 +44,14 @@ $router->group('admin', [AuthAdmin::class], static function (Router $r): void {
     $r->post('/pengguna/{id}/hapus', [PenggunaController::class, 'destroy']);
     $r->get('/akun', [AkunController::class, 'edit']);
     $r->post('/akun', [AkunController::class, 'update']);
+
+    // Gambar di isi editor HTML (fetch dari admin.js)
+    $r->post('/unggah-gambar', [UnggahGambarController::class, 'simpan']);
+
+    // Impor Excel pengumpulan (Kepala ditolak middleware: bukan akses_kepala)
+    $r->get('/pengumpulan/impor', [PengumpulanImporController::class, 'form']);
+    $r->post('/pengumpulan/impor', [PengumpulanImporController::class, 'impor']);
+    $r->get('/pengumpulan/format-impor', [PengumpulanImporController::class, 'format']);
 
     // CRUD generik (config/admin.php) — paling akhir agar route khusus di atas didahulukan
     $r->get('/{res}', [ResourceController::class, 'index']);
