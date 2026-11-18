@@ -29,7 +29,7 @@ $halaman = [
     "/berita/$slugPost" => 200, '/berita/tidak-ada-slug' => 404,
     '/program' => 200, '/program/basel-sehat' => 200, '/program/basel-peduli?sub=tanggap-bencana' => 200, '/program/tidak-ada' => 404,
     '/zakat' => 200, '/zakat/zakat-fitrah' => 200, '/zakat/tidak-ada' => 404,
-    '/rekening' => 200, '/regulasi' => 200, '/regulasi?kategori=2' => 200, '/regulasi?kategori=8' => 200, '/regulasi?kategori=abc' => 200,
+    '/layanan' => 200, '/rekening' => 200, '/regulasi' => 200, '/regulasi?kategori=2' => 200, '/regulasi?kategori=8' => 200, '/regulasi?kategori=abc' => 200,
     '/laporan' => 200, '/video' => 200, '/galeri' => 200, '/galeri?jenis=poster' => 200,
     '/tentang' => 302, '/tentang/profil' => 200, '/tentang/visi-misi' => 200, '/halaman/kurban' => 200,
     '/halaman/profil' => 301, '/tentang/kurban' => 301, '/halaman/faq' => 404,

@@ -14,6 +14,7 @@ return [
     'newspaper'     => '<path d="M4 5h12v14H6a2 2 0 0 1-2-2z"/><path d="M16 9h4v8a2 2 0 0 1-2 2"/><path d="M8 9h4M8 13h4M8 16h2"/>',
     'menu'          => '<path d="M4 6h16M4 12h16M4 18h16"/>',
     'search'        => '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+    'caret'         => '<path d="M6 9.5h12l-6 6.5z" fill="currentColor" stroke="none"/>',
     'x'             => '<path d="M6 6l12 12M18 6 6 18"/>',
     'chevron-right' => '<path d="m9 6 6 6-6 6"/>',
     'chevron-left'  => '<path d="m15 6-6 6 6 6"/>',

@@ -18,6 +18,27 @@
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 
   --radius-card: 1rem;
+
+  /* Font self-hosted (public/assets/fonts) hanya untuk header: nama situs (Roboto) & menu (Montserrat) */
+  --font-roboto: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --font-montserrat: "Montserrat", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+/* Variabel (satu file = semua ketebalan dalam rentang), subset Latin. Nama file berversi → aman di-cache 1 tahun. */
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("../fonts/roboto-v51-latin-400-800.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/montserrat-v31-latin-400-700.woff2") format("woff2");
 }
 
 @layer base {
@@ -47,13 +68,14 @@
     background: rgb(17 24 39 / 0.5);
   }
 
+  /* Panel menu HP masuk dari kiri (partials/menu-sheet) */
   .sheet[open] {
-    animation: sheet-naik 0.22s ease-out;
+    animation: panel-masuk 0.22s ease-out;
   }
 
-  @keyframes sheet-naik {
+  @keyframes panel-masuk {
     from {
-      transform: translateY(100%);
+      transform: translateX(-100%);
     }
   }
 

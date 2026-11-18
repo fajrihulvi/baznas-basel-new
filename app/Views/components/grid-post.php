@@ -10,7 +10,7 @@
  * @var bool|null     $eagerPertama gambar kartu pertama dimuat segera (kandidat LCP di halaman daftar)
  */
 ?>
-<ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+<ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6"><?php /* grid-cols-1 wajib: kolom auto ikut melebar mengikuti contain-intrinsic-size .cv-kartu (scroll horizontal di HP) */ ?>
     <?php foreach ($posts as $i => $p): ?>
     <li<?= $i >= 3 ? ' class="cv-kartu"' : '' ?>>
         <?= $this->insert('components/card-post', [

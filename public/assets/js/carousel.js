@@ -17,14 +17,16 @@ const pengamatUkuran = new ResizeObserver((entri) => {
 
 function buat(root) {
   const track = root.querySelector('[data-carousel-track]');
-  const kontrol = root.querySelector('[data-carousel-controls]');
-  if (!track || !kontrol) return;
+  const kontrol = root.querySelector('[data-carousel-controls]'); // boleh tidak ada (mis. hero: hanya panah samping)
+  if (!track || (!kontrol && !root.querySelector('[data-carousel-panah]'))) return;
 
   const slides = [...track.children];
   const wadahTitik = root.querySelector('[data-carousel-dots]');
   const tombolPrev = root.querySelector('[data-carousel-prev]');
   const tombolNext = root.querySelector('[data-carousel-next]');
   const tombolJeda = root.querySelector('[data-carousel-pause]');
+  const panahSamping = root.querySelectorAll('[data-carousel-panah]');
+  const putar = root.hasAttribute('data-carousel-putar'); // panah berputar: awal ↔ akhir (tidak pernah nonaktif)
 
   let posisi = slides.map(() => 0);
   let maks = 0;
@@ -60,9 +62,11 @@ function buat(root) {
       maks = m.maks;
       bisaGeser = m.maks > 1;
       // Ruang kontrol sudah dipesan (invisible) sejak server → menampilkannya tidak menggeser layout
-      kontrol.classList.toggle('invisible', !bisaGeser);
+      kontrol?.classList.toggle('invisible', !bisaGeser);
+      panahSamping.forEach((el) => el.classList.toggle('invisible', !bisaGeser));
       const sekarang = aktif(m.x);
       titik.forEach((b, i) => b.setAttribute('aria-current', String(i === sekarang)));
+      if (putar) return;
       if (tombolPrev) tombolPrev.disabled = m.x <= 1;
       if (tombolNext) tombolNext.disabled = m.x >= maks - 1;
     },
@@ -85,8 +89,14 @@ function buat(root) {
     });
   }, { passive: true });
 
-  tombolPrev?.addEventListener('click', () => ke(Math.max(0, aktif(track.scrollLeft) - 1)));
-  tombolNext?.addEventListener('click', () => ke(Math.min(slides.length - 1, aktif(track.scrollLeft) + 1)));
+  tombolPrev?.addEventListener('click', () => {
+    const i = aktif(track.scrollLeft) - 1;
+    ke(i < 0 ? (putar ? slides.length - 1 : 0) : i);
+  });
+  tombolNext?.addEventListener('click', () => {
+    const i = aktif(track.scrollLeft) + 1;
+    ke(i > slides.length - 1 || (putar && track.scrollLeft >= maks - 1) ? (putar ? 0 : slides.length - 1) : i);
+  });
 
   // --- Autoplay ---------------------------------------------------------------
   const jeda = Number(root.dataset.autoplay || 0);

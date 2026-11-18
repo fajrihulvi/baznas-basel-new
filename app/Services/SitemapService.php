@@ -21,6 +21,7 @@ final class SitemapService
         '/zakat'            => '0.8',
         '/program'          => '0.8',
         '/berita'           => '0.8',
+        '/layanan'          => '0.7',
         '/rekening'         => '0.7',
         '/konfirmasi'       => '0.5',
         '/regulasi'         => '0.6',

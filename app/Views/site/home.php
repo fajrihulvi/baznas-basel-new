@@ -6,7 +6,6 @@
  * @var list<array> $banner     id, judul, foto, foto_mobile, link, dim, dim_mobile
  * @var list<array> $layanan
  * @var list<array> $pilar
- * @var list<array> $ticker     judul, slug
  * @var array<string, list<array>> $kabar  per tab HomeService::TAB_KABAR
  * @var list<array> $video
  * @var list<array> $zakat      judul, slug
@@ -80,12 +79,15 @@ $this->layout('site', [
 
 // Ikon berwarna: Bayar Zakat = SVG inline (partials/ikon-nav); lainnya WebP transparan dari public/icon/*.png
 // (assets/img/aksi/{nama}-72|108.webp, ±3 KB; aslinya ±1 MB).
-$aksiCepat = [
-    ['Bayar Zakat', '/bayar-zakat', ['svg', 'bayar-zakat']],
-    ['Kalkulator', '/kalkulator-zakat', ['img', 'kalkulator']],
-    ['Konfirmasi', '/konfirmasi', ['img', 'konfirmasi']],
-    ['Rekening', '/rekening', ['img', 'rekening']],
-];
+// Ikon menu bilah navigasi bawah (per URL tujuan) untuk hiasan di atas judul bagian
+$ikonBawah = [];
+foreach (App\Services\Navigation::bawah() as $n) {
+    if ($n['url'] !== null && $n['svg'] !== null) {
+        $ikonBawah[$n['url']] = $n;
+    }
+}
+$navLayanan = $ikonBawah['/layanan'] ?? null;
+$navProgram = $ikonBawah['/program'] ?? null;
 ?>
 <h1 class="sr-only"><?= e($namaSitus) ?> — <?= e(setting('tagline', 'Badan Amil Zakat Nasional')) ?></h1>
 
@@ -97,35 +99,22 @@ $aksiCepat = [
         'slides'       => $slideHero,
         'itemClass'    => 'w-full',
         'autoplay'     => 6000,
-        'kontrolClass' => 'lg:mx-auto lg:max-w-6xl lg:px-4', // kontrol tetap sejajar konten di bawahnya
+        'panahSamping' => true,  // panah di kiri & kanan gambar
+        'tombolJeda'   => false, // autoplay tetap berhenti saat hover/fokus/sentuh & prefers-reduced-motion
+        'titik'        => false, // tanpa titik penanda → tanpa baris kontrol di bawah banner
     ]) ?>
 </div>
 <?php endif ?>
 
-<?php /* 2. Aksi cepat (HP) */ ?>
-<nav aria-label="Aksi cepat" class="mx-auto max-w-6xl px-4 pt-2 lg:hidden">
-    <ul class="grid grid-cols-4 gap-2">
-        <?php foreach ($aksiCepat as [$label, $link, [$jenis, $ikon]]): ?>
-        <li>
-            <a href="<?= e(url($link)) ?>" class="flex flex-col items-center gap-1.5 rounded-2xl p-2 text-center text-xs font-semibold text-ink hover:bg-surface">
-                <span class="grid size-14 place-items-center rounded-2xl bg-primary/10">
-                    <?php if ($jenis === 'svg'): ?>
-                    <?= $this->insert('partials/ikon-nav', ['nama' => $ikon, 'aktif' => false, 'berwarna' => true, 'ukuran' => 'size-9']) ?>
-                    <?php else: ?>
-                    <img src="<?= e(asset('img/aksi/' . $ikon . '-72.webp')) ?>" srcset="<?= e(asset('img/aksi/' . $ikon . '-72.webp')) ?> 2x, <?= e(asset('img/aksi/' . $ikon . '-108.webp')) ?> 3x"
-                         width="36" height="36" alt="" decoding="async" class="size-9">
-                    <?php endif ?>
-                </span>
-                <?= e($label) ?>
-            </a>
-        </li>
-        <?php endforeach ?>
-    </ul>
-</nav>
-
 <?php /* 3. Tunaikan Zakat (layanan) */ ?>
 <?php if ($layanan !== []): ?>
 <section class="<?= $blok ?>" aria-labelledby="judul-layanan">
+    <?php if ($navLayanan !== null): ?>
+    <?php /* Ikon menu "Layanan" di bilah navigasi bawah (SVG bawaan atau gambar admin → Ikon Navigasi), dekoratif */ ?>
+    <div class="mb-4 flex justify-center" aria-hidden="true">
+        <?= $this->insert('partials/ikon-nav', ['nama' => $navLayanan['svg'], 'aktif' => false, 'berwarna' => true, 'ukuran' => 'size-20 lg:size-24', 'gambar' => $navLayanan['gambar']]) ?>
+    </div>
+    <?php endif ?>
     <?= $this->insert('components/section-title', [
         'judul' => 'Tunaikan Zakat', 'id' => 'judul-layanan', 'tengah' => true,
         'subjudul' => 'Pilih cara yang paling mudah untuk Anda.',
@@ -139,45 +128,33 @@ $aksiCepat = [
 </section>
 <?php endif ?>
 
-<?php /* 4. Program Kami — 5 pilar */ ?>
+<?php /* 4. Program Kami — 5 pilar: deret ikon + nama (ikon & warna dari admin → 5 Pilar) */ ?>
 <section class="cv-auto bg-surface" aria-labelledby="judul-program">
     <div class="<?= $blok ?>">
+        <?php if ($navProgram !== null): ?>
+        <?php /* Ikon menu "Program" di bilah navigasi bawah, dekoratif */ ?>
+        <div class="mb-4 flex justify-center" aria-hidden="true">
+            <?= $this->insert('partials/ikon-nav', ['nama' => $navProgram['svg'], 'aktif' => false, 'berwarna' => true, 'ukuran' => 'size-20 lg:size-24', 'gambar' => $navProgram['gambar']]) ?>
+        </div>
+        <?php endif ?>
         <?= $this->insert('components/section-title', [
             'judul' => 'Program Kami', 'id' => 'judul-program', 'tengah' => true,
             'subjudul' => 'Lima pilar penyaluran zakat untuk masyarakat Bangka Selatan.',
         ]) ?>
-        <ul class="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
-            <?php foreach ($pilar as $i => $p): ?>
-            <li class="<?= $i === count($pilar) - 1 && count($pilar) % 2 === 1 ? 'col-span-2 lg:col-span-1' : '' ?>">
-                <?= $this->insert('components/card-program', ['pilar' => $p, 'besar' => true]) ?>
+        <ul class="mx-auto grid max-w-4xl grid-cols-5 gap-1.5 sm:gap-6">
+            <?php foreach ($pilar as $p): ?>
+            <li>
+                <a href="<?= e(url('program/' . $p['slug'])) ?>" class="group flex flex-col items-center gap-2 rounded-2xl p-1 text-center sm:gap-3">
+                    <span class="transition-transform duration-200 group-hover:-translate-y-1 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
+                        <?= $this->insert('components/ikon-pilar', ['pilar' => $p, 'kotak' => 'size-14 sm:size-24 lg:size-28', 'ukuranIkon' => 'size-7 sm:size-12 lg:size-14', 'ukuranUnggahan' => 'size-10 sm:size-16 lg:size-20', 'sizes' => '(min-width: 1024px) 80px, (min-width: 640px) 64px, 40px']) ?>
+                    </span>
+                    <span class="text-xs font-semibold leading-tight text-ink group-hover:text-primary sm:text-base"><?= e($p['label']) ?></span>
+                </a>
             </li>
             <?php endforeach ?>
         </ul>
     </div>
 </section>
-
-<?php /* 5. Info BAZNAS (ticker) */ ?>
-<?php if ($ticker !== []): ?>
-<section aria-label="Info BAZNAS" class="mx-auto max-w-6xl px-4 pt-10 lg:pt-16">
-    <div data-ticker class="flex h-14 items-center gap-3 rounded-2xl border border-primary/15 bg-primary/5 pr-1 pl-3">
-        <span class="flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
-            <?= icon('info', 'size-4') ?> Info
-        </span>
-        <ul class="relative h-full min-w-0 flex-1 overflow-hidden" aria-live="off">
-            <?php foreach ($ticker as $i => $t): ?>
-            <?php /* Ganti item: geser naik singkat, bukan fade — teks tidak pernah setengah transparan (kontras AA tetap utuh) */ ?>
-            <li data-ticker-item class="absolute inset-0 flex items-center transition-transform duration-300 ease-out<?= $i > 0 ? ' invisible translate-y-3' : '' ?>"<?= $i > 0 ? ' aria-hidden="true"' : '' ?>>
-                <a href="<?= e(url('berita/' . $t['slug'])) ?>"<?= $i > 0 ? ' tabindex="-1"' : '' ?> class="block w-full truncate py-3 text-sm font-medium text-ink hover:text-primary hover:underline"><?= e($t['judul']) ?></a>
-            </li>
-            <?php endforeach ?>
-        </ul>
-        <button type="button" data-ticker-pause hidden aria-pressed="false" aria-label="Jeda info bergulir"
-                class="grid size-11 shrink-0 place-items-center rounded-full text-primary hover:bg-primary/10">
-            <svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path data-ikon-jeda d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/><path data-ikon-putar hidden d="M8 5.5v13l10.5-6.5z"/></svg>
-        </button>
-    </div>
-</section>
-<?php endif ?>
 
 <?php /* 6. Kabar BAZNAS */ ?>
 <section class="cv-auto <?= $blok ?>" aria-labelledby="judul-kabar" data-tabs>
@@ -301,7 +278,6 @@ $aksiCepat = [
     <?php /* Prioritas rendah: tidak berebut bandwidth dengan gambar LCP; halaman sudah berfungsi tanpa JS */ ?>
     <script type="module" src="<?= e(asset('js/carousel.js')) ?>" fetchpriority="low"></script>
     <script type="module" src="<?= e(asset('js/tabs.js')) ?>" fetchpriority="low"></script>
-    <script type="module" src="<?= e(asset('js/ticker.js')) ?>" fetchpriority="low"></script>
     <script type="module" src="<?= e(asset('js/lite-yt.js')) ?>" fetchpriority="low"></script>
     <script type="module" src="<?= e(asset('js/testimoni.js')) ?>" fetchpriority="low"></script>
 <?php $this->stop() ?>

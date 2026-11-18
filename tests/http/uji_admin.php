@@ -133,7 +133,7 @@ $cek('konten disanitasi (tanpa script/style/onclick/javascript:; h1→h2)', $p &
 $cek('ringkasan otomatis dari isi', $p && str_starts_with((string) $p['ringkasan'], 'Judul Penyaluran zakat'), (string) ($p['ringkasan'] ?? ''));
 $pub = req($jar, 'GET', "$base/berita/kabar-uji-fase-tujuh-admin");
 $cek('tampil di situs /berita/{slug} + pilar Basel Sehat', $pub['kode'] === 200 && str_contains($pub['body'], 'Basel Sehat'));
-$cek('muncul di ticker beranda (is_featured)', str_contains(req($jar, 'GET', "$base/")['body'], 'Kabar Uji Fase Tujuh Admin'));
+$cek('muncul di Kabar BAZNAS beranda', str_contains(req($jar, 'GET', "$base/")['body'], 'Kabar Uji Fase Tujuh Admin'));
 $r = req($jar, 'POST', "$base/admin/post/{$p['id']}", ['_token' => $tok(), 'judul' => 'Kabar Uji Fase Tujuh Admin', 'jenis' => 'berita', 'konten' => $p['konten'], 'ringkasan' => $p['ringkasan'], 'slug' => 'kabar-uji-f7-baru', 'tgl' => date('Y-m-d'), 'publish' => '1']);
 $lama = req($jar, 'GET', "$base/berita/kabar-uji-fase-tujuh-admin");
 $cek('slug diubah → alamat lama 301 ke alamat baru', $lama['kode'] === 301 && str_ends_with($lama['lokasi'], '/berita/kabar-uji-f7-baru'));

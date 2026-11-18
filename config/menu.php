@@ -42,11 +42,13 @@ return [
     ],
 
     // Bottom navigation (< lg). 'tengah' = tombol Bayar Zakat yang menonjol; url null = buka menu sheet.
+    // 'svg' = ikon slot (partials/ikon-nav) sekaligus kunci tabel ikon_nav (admin → Ikon Navigasi: label & gambar).
+    // Ikon tetap di slotnya: slot 2 (ikon kotak 'program') = Layanan, slot 4 (ikon 'kabar') = Program.
     'bawah' => [
         ['label' => 'Beranda', 'url' => '/', 'ikon' => 'home', 'svg' => 'beranda', 'aktif' => ['/'], 'persis' => true],
-        ['label' => 'Program', 'url' => '/program', 'ikon' => 'grid', 'svg' => 'program', 'aktif' => ['/program']],
+        ['label' => 'Layanan', 'url' => '/layanan', 'ikon' => 'grid', 'svg' => 'program', 'aktif' => ['/layanan']],
         ['label' => 'Bayar Zakat', 'url' => '/bayar-zakat', 'ikon' => 'heart', 'svg' => 'bayar-zakat', 'aktif' => ['/bayar-zakat'], 'tengah' => true],
-        ['label' => 'Kabar', 'url' => '/berita', 'ikon' => 'newspaper', 'svg' => 'kabar', 'aktif' => ['/berita']],
+        ['label' => 'Program', 'url' => '/program', 'ikon' => 'newspaper', 'svg' => 'kabar', 'aktif' => ['/program']],
         ['label' => 'Menu', 'url' => null, 'ikon' => 'menu', 'svg' => 'menu'],
     ],
 

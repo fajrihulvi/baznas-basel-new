@@ -49,6 +49,12 @@ final class PageController extends Controller
         return $this->view('site/testimoni', ['testimoni' => Testimoni::terbit(100)]);
     }
 
+    /** /layanan — ikon layanan zakat (tujuan menu "Layanan" di bilah navigasi bawah). */
+    public function layanan(Request $request): Response
+    {
+        return $this->view('site/layanan');
+    }
+
     public function rekening(Request $request): Response
     {
         return $this->view('site/rekening', ['rekening' => SiteService::rekening()]);

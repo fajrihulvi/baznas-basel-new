@@ -8,7 +8,7 @@ use App\Core\Database;
 
 final class Post
 {
-    private const KOLOM_KARTU = 'id, jenis, judul, slug, ringkasan, foto, foto_w, foto_h, tgl';
+    private const KOLOM_KARTU = 'id, jenis, judul, slug, ringkasan, foto, foto_w, foto_h, tgl, views';
 
     public const JENIS = ['berita', 'artikel', 'berkah_zakat', 'program', 'event'];
 
@@ -16,15 +16,6 @@ final class Post
     public static function terbaru(int $limit, ?string $jenis = null): array
     {
         return self::daftar($jenis, $limit, 0);
-    }
-
-    /** Judul untuk ticker "Info BAZNAS": yang disorot dulu, lalu terbaru. */
-    public static function sorotan(int $limit): array
-    {
-        return Database::fetchAll(
-            "SELECT judul, slug FROM post WHERE publish = 'Y' ORDER BY is_featured DESC, tgl DESC, id DESC LIMIT ?",
-            [$limit]
-        );
     }
 
     public static function daftar(?string $jenis, int $limit, int $offset): array

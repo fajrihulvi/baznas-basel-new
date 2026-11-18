@@ -1,7 +1,7 @@
 // JS umum situs publik (ES module, otomatis defer). Tanpa library.
 // Semua fitur bersifat peningkatan: tanpa JS, link & dropdown <details> tetap berfungsi.
 
-// --- Bottom sheet "Menu" (<dialog>) -------------------------------------------
+// --- Panel menu HP (<dialog>, masuk dari kiri) ---------------------------------
 const sheet = document.getElementById('menu-sheet');
 
 if (sheet instanceof HTMLDialogElement) {
@@ -46,20 +46,22 @@ if (sheet instanceof HTMLDialogElement) {
     }
   });
 
-  // Geser ke bawah dari area pegangan untuk menutup
-  const pegangan = sheet.querySelector('[data-sheet-handle]');
-  let awalY = null;
-  pegangan?.addEventListener('touchstart', (e) => { awalY = e.touches[0].clientY; }, { passive: true });
-  pegangan?.addEventListener('touchmove', (e) => {
-    if (awalY === null) return;
-    const dy = Math.max(0, e.touches[0].clientY - awalY);
-    sheet.style.transform = `translateY(${dy}px)`;
+  // Geser ke kiri untuk menutup (hanya bila gerakan dominan mendatar — gulir daftar tetap normal)
+  let awal = null;
+  sheet.addEventListener('touchstart', (e) => { awal = { x: e.touches[0].clientX, y: e.touches[0].clientY, geser: false }; }, { passive: true });
+  sheet.addEventListener('touchmove', (e) => {
+    if (awal === null) return;
+    const dx = e.touches[0].clientX - awal.x;
+    const dy = e.touches[0].clientY - awal.y;
+    if (!awal.geser && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) awal.geser = true;
+    if (awal.geser) sheet.style.transform = `translateX(${Math.min(0, dx)}px)`;
   }, { passive: true });
-  pegangan?.addEventListener('touchend', (e) => {
-    if (awalY === null) return;
-    const dy = e.changedTouches[0].clientY - awalY;
-    awalY = null;
-    if (dy > 80) {
+  sheet.addEventListener('touchend', (e) => {
+    if (awal === null) return;
+    const dx = e.changedTouches[0].clientX - awal.x;
+    const geser = awal.geser;
+    awal = null;
+    if (geser && dx < -80) {
       tutup();
     } else {
       sheet.style.transform = '';

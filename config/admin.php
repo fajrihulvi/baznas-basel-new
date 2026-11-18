@@ -44,7 +44,7 @@ return [
         'post' => [
             'judul' => 'Kabar & Kegiatan', 'tunggal' => 'kabar', 'tabel' => 'post', 'pk' => 'id',
             'urut' => 'tgl DESC, id DESC', 'cari' => ['judul'],
-            'kolom' => ['foto' => 'gambar', 'judul' => 'teks', 'jenis' => 'pilihan', 'tgl' => 'tanggal', 'views' => 'angka', 'is_featured' => 'centang', 'publish' => 'publish'],
+            'kolom' => ['foto' => 'gambar', 'judul' => 'teks', 'jenis' => 'pilihan', 'tgl' => 'tanggal', 'views' => 'angka', 'publish' => 'publish'],
             'label_kolom' => ['views' => 'Dilihat'],
             'tautan' => '/berita/{slug}',
             'field' => [
@@ -60,7 +60,6 @@ return [
                 'slug'           => ['tipe' => 'slug', 'label' => 'Alamat (slug)', 'dari' => 'judul', 'hint' => 'Kosongkan untuk dibuat otomatis dari judul. Bila diubah, alamat lama otomatis dialihkan.'],
                 'penulis'        => ['tipe' => 'teks', 'label' => 'Penulis', 'aturan' => 'nullable|max:100'],
                 'tgl'            => $tanggal,
-                'is_featured'    => ['tipe' => 'centang', 'label' => 'Sorot di "Info BAZNAS" beranda'],
                 'publish'        => $publish,
             ],
             'cache' => ['home', 'sitemap'],
@@ -206,8 +205,9 @@ return [
         'ikon-navigasi' => [
             'judul' => 'Ikon Navigasi Bawah', 'tunggal' => 'ikon navigasi', 'tabel' => 'ikon_nav', 'pk' => 'id',
             'urut' => 'urutan, id', 'aksi' => ['ubah'],
-            'keterangan' => 'Lima tombol di bilah bawah layar HP. Unggah gambar untuk mengganti ikon; kosongkan (centang "Hapus file ini") untuk kembali ke ikon bawaan. Ikon yang tidak aktif otomatis tampil keabu-abuan, berwarna saat halamannya dibuka.',
+            'keterangan' => 'Lima tombol di bilah bawah layar HP. Unggah gambar untuk mengganti ikon; kosongkan (centang "Hapus file ini") untuk kembali ke ikon bawaan. Ikon yang tidak aktif otomatis tampil keabu-abuan, berwarna saat halamannya dibuka. Kolom Kunci = nama ikon bawaan per posisi: "program" (posisi 2) kini menu Layanan, "kabar" (posisi 4) kini menu Program.',
             'kolom' => ['ikon' => 'gambar', 'label' => 'teks', 'kunci' => 'teks'],
+            'label_kolom' => ['kunci' => 'Kunci (ikon bawaan)'],
             'field' => [
                 'label' => ['tipe' => 'teks', 'label' => 'Label', 'aturan' => 'required|max:14', 'hint' => 'Maksimal 14 huruf agar muat di layar HP, mis. "Bayar Zakat".'],
                 'ikon'  => ['tipe' => 'gambar', 'label' => 'Gambar ikon (opsional)', 'folder' => 'ikon-nav',

@@ -64,9 +64,12 @@ try {
     req('HEAD', "$base/berita/uji-dilihat-a", ['User-Agent: ' . CHROME]);
     req('GET', "$base/berita/uji-dilihat-a", ['User-Agent: Googlebot/2.1']);
     $cek('GET berulang, HEAD, & Googlebot tidak menambah', $views($idA) === 5);
-    $cek('berita belum pernah dilihat: penghitung disembunyikan (hidden)', (bool) preg_match('/<span data-dilihat[^>]*hidden>/', req('GET', "$base/berita/uji-dilihat-nol")['body']));
-    $n = req('GET', "$base/berita/uji-dilihat-a");
-    $cek('berita sudah dilihat: penghitung tidak disembunyikan', !preg_match('/<span data-dilihat[^>]*hidden>/', $n['body']));
+    $n = req('GET', "$base/berita/uji-dilihat-nol")['body'];
+    $cek('berita belum pernah dilihat tetap menampilkan "Dilihat 0 orang"', str_contains(preg_replace('/\s+/u', ' ', strip_tags($n)), 'Dilihat 0 orang') && !preg_match('/data-dilihat[^>]*hidden/', $n));
+    $d = req('GET', "$base/berita?hal=1")['body'];
+    $cek('kartu di daftar /berita menampilkan jumlah dilihat', (bool) preg_match('#\d dilihat</span>#', $d));
+    $kartu = preg_match('#<article(?:(?!</article>).)*uji-dilihat-a"(?:(?!</article>).)*</article>#s', req('GET', "$base/cari?q=" . rawurlencode('Berita uji dilihat'))['body'], $k) ? $k[0] : '';
+    $cek('angka di kartu = angka berita ("5 dilihat")', str_contains($kartu, '5 dilihat'));
 
     echo "\n== Asal permintaan\n";
     $r = req('POST', "$base/berita/uji-dilihat-a/dilihat", ['User-Agent: ' . CHROME]);

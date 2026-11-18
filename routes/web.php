@@ -32,6 +32,7 @@ $router->get('/program/{slug}', [ProgramController::class, 'pilar']);
 $router->get('/zakat', [ZakatController::class, 'index']);
 $router->get('/zakat/{slug}', [ZakatController::class, 'show']);
 $router->get('/rekening', [PageController::class, 'rekening']);
+$router->get('/layanan', [PageController::class, 'layanan']);
 $router->get('/kalkulator-zakat', [KalkulatorController::class, 'index']);
 $router->get('/bayar-zakat', [PembayaranController::class, 'form']);
 $router->post('/bayar-zakat', [PembayaranController::class, 'simpan']);

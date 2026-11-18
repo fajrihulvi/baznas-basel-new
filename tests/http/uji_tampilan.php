@@ -16,6 +16,21 @@ $waAwal = $pdo->query("SELECT nilai FROM setting WHERE kunci = 'whatsapp'")->fet
 $halamanAwal = $pdo->query('SELECT * FROM halaman WHERE id = 1')->fetch();
 $mulaiUji = time() - 1;
 $navAwal = $pdo->query('SELECT * FROM ikon_nav')->fetchAll();
+
+// Cadangkan berkas unggahan ASLI yang akan diganti gambar uji: admin menghapus file lama saat file diganti,
+// jadi tanpa cadangan gambar milik pengguna lokal ikut hilang. Dipulihkan di blok finally.
+$cadangan = "$tmp/cadangan-tampilan";
+@mkdir($cadangan, 0755, true);
+$berkasAsli = [];
+$cadangkan = function (string $folder, ?string $file) use ($proyek, $cadangan, &$berkasAsli): void {
+    if ($file === null || $file === '') return;
+    foreach (glob("$proyek/public/uploads/$folder/" . pathinfo($file, PATHINFO_FILENAME) . '*') ?: [] as $b) {
+        copy($b, "$cadangan/" . basename($b));
+        $berkasAsli[] = [$b, "$cadangan/" . basename($b)];
+    }
+};
+$cadangkan('layanan', $layananAwal['gambar'] ?? null);
+foreach ($navAwal as $n) { $cadangkan('ikon-nav', $n['ikon']); }
 $PASS = 'Uji-Tampilan-' . bin2hex(random_bytes(3));
 $pdo->exec("DELETE FROM user WHERE username = 'uji_tp_admin'");
 $pdo->prepare("INSERT INTO user (username, password, f_name, l_name, level, status) VALUES ('uji_tp_admin', ?, 'Admin', 'Uji', 1, '1')")->execute([password_hash($PASS, PASSWORD_BCRYPT)]);
@@ -86,22 +101,29 @@ try {
     $nav = $nav[0] ?? '';
     $cek('bottom nav: label baru & gambar unggahan tampil (cache site langsung terhapus)', str_contains($nav, 'Program Kami') && str_contains($nav, 'uploads/ikon-nav/' . substr($ikon, 0, -4)));
     $cek('di beranda ikon Program tidak aktif → keabu-abuan (grayscale), berwarna saat hover', preg_match('#<img[^>]*ikon-nav[^>]*class="[^"]*grayscale[^"]*group-hover:grayscale-0#', $nav) === 1);
-    preg_match('#<nav aria-label="Navigasi bawah".*?</nav>#s', req($jP, 'GET', "$base/program")['body'], $navProgram);
-    $cek('di /program ikon Program aktif → berwarna penuh + animasi hover', preg_match('#<img[^>]*ikon-nav[^>]*class="(?![^"]*grayscale)[^"]*group-hover:scale-115#', $navProgram[0] ?? '') === 1);
+    preg_match('#<nav aria-label="Navigasi bawah".*?</nav>#s', req($jP, 'GET', "$base/layanan")['body'], $navProgram);
+    $cek('di /layanan ikon slot Layanan aktif → berwarna penuh + animasi hover', preg_match('#<img[^>]*ikon-nav[^>]*class="(?![^"]*grayscale)[^"]*group-hover:scale-115#', $navProgram[0] ?? '') === 1);
     $cek('ikon lain (Beranda, Kabar, Menu) tetap SVG bawaan', substr_count($nav, '<svg class="') >= 4);
     $u = req($jA, 'GET', "$base/admin/ikon-navigasi/$idProgram/ubah");
     $r = req($jA, 'POST', "$base/admin/ikon-navigasi/$idProgram", ['_token' => token($u['body']), 'label' => 'Label Terlalu Panjang Sekali']);
     $cek('label > 14 huruf ditolak', str_contains($teks(req($jA, 'GET', "$base/admin/ikon-navigasi/$idProgram/ubah")['body']), 'Label maksimal 14 karakter'));
     $u = req($jA, 'GET', "$base/admin/ikon-navigasi/$idProgram/ubah");
-    $r = req($jA, 'POST', "$base/admin/ikon-navigasi/$idProgram", ['_token' => token($u['body']), 'label' => 'Program', 'hapus_ikon' => '1']);
+    $r = req($jA, 'POST', "$base/admin/ikon-navigasi/$idProgram", ['_token' => token($u['body']), 'label' => 'Layanan', 'hapus_ikon' => '1']);
     $sisa = $pdo->query("SELECT ikon FROM ikon_nav WHERE id = $idProgram")->fetchColumn();
     preg_match('#<nav aria-label="Navigasi bawah".*?</nav>#s', req($jP, 'GET', "$base/")['body'], $nav);
     $cek('hapus gambar → kembali ke SVG bawaan, berkas & varian terhapus', $r['kode'] === 303 && $sisa === null && !str_contains($nav[0] ?? '', 'ikon-nav/')
         && glob("$proyek/public/uploads/ikon-nav/" . substr($ikon, 0, -4) . '*') === []);
     $nav = $nav[0] ?? '';
-    $cek('bottom nav: bilah 80px, ikon 48px (2×), Bayar Zakat 80px & label dua baris', str_contains($nav, 'grid h-20') && substr_count($nav, 'size-12') >= 4
-        && str_contains($nav, 'size-20') && str_contains($nav, 'Bayar<br>Zakat'));
-    $cek('body memberi ruang 5rem untuk bilah bawah', str_contains(req($jP, 'GET', "$base/")['body'], 'pb-[calc(5rem+env(safe-area-inset-bottom))]'));
+    $cek('bottom nav: bilah 80px selebar layar, ikon 48px, Bayar Zakat lingkaran 92px gradasi hijau + label dua baris', str_contains($nav, 'flex h-20 w-full justify-between') && substr_count($nav, 'size-12') >= 4
+        && str_contains($nav, 'size-[92px]') && str_contains($nav, 'bg-[linear-gradient(180deg,#0b3a12') && str_contains($nav, 'Bayar<br>Zakat'));
+    $navUrut = preg_match_all('#<a href="[^"]*?(/[a-z-]*)"[^>]*>.*?</a>#s', $nav, $m) ? $m[1] : [];
+    $cek('bilah bawah: Beranda, Layanan (/layanan), Bayar Zakat, Program (/program); Kabar tidak ada', $navUrut === ['/', '/layanan', '/bayar-zakat', '/program']
+        && str_contains($nav, 'Layanan') && !str_contains($nav, '>Kabar<') && !str_contains($nav, '/berita"'), implode(' ', $navUrut));
+    $lay = req($jP, 'GET', "$base/layanan")['body'];
+    $cek('/layanan berisi 4 ikon: Bayar Zakat, Kalkulator, Konfirmasi, Rekening', substr_count($lay, 'rounded-2xl bg-primary/10') === 4
+        && str_contains($lay, '/kalkulator-zakat"') && str_contains($lay, '/konfirmasi"') && str_contains($lay, '/rekening"'));
+    $cek('beranda tanpa "Aksi cepat" (dipindah ke /layanan)', !str_contains(req($jP, 'GET', "$base/")['body'], 'aria-label="Aksi cepat"'));
+    $cek('body memberi ruang 6rem untuk bilah bawah', str_contains(req($jP, 'GET', "$base/")['body'], 'pb-[calc(6rem+env(safe-area-inset-bottom))]'));
 
     echo "\n== Tunaikan Zakat (beranda)\n";
     $pdo->exec("INSERT INTO layanan (judul, deskripsi, link, urutan, publish) VALUES ('UJI-TP Kartu kelima', 'x', '/bayar-zakat', 99, 'Y')");
@@ -190,6 +212,13 @@ try {
     $hapusCache();
     foreach ([$jA, $jP, "$tmp/ikon-uji.png"] as $x) @unlink($x);
 }
+// Pulihkan berkas asli yang terhapus saat diganti gambar uji
+foreach ($berkasAsli as [$asli, $salinan]) {
+    if (!is_file($asli)) { @mkdir(dirname($asli), 0755, true); copy($salinan, $asli); }
+    @unlink($salinan);
+}
+@rmdir($cadangan);
+$cek('berkas unggahan asli (kartu Tunaikan Zakat & ikon navigasi) tetap ada', array_filter($berkasAsli, static fn (array $b): bool => !is_file($b[0])) === []);
 $sekarang = $pdo->query('SELECT warna_latar, opasitas_latar FROM kategori_program WHERE id_kategori_program = 1')->fetch();
 $cek('data pilar & ikon navigasi kembali seperti semula', $sekarang['warna_latar'] === $pilarAwal['warna_latar'] && $pdo->query('SELECT label, ikon FROM ikon_nav ORDER BY id')->fetchAll() == array_map(fn ($n) => ['label' => $n['label'], 'ikon' => $n['ikon']], $navAwal));
 printf("\n%s — %d gagal\n", $gagal === 0 ? 'SEMUA LULUS' : 'ADA YANG GAGAL', $gagal);

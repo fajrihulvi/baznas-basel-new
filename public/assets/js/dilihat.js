@@ -25,9 +25,8 @@ if (wadah && !navigator.webdriver) {
       tandai();
       if (res.status === 200) {
         const { dilihat } = await res.json();
-        if (Number.isInteger(dilihat) && dilihat > 0) {
+        if (Number.isInteger(dilihat)) {
           wadah.querySelector('[data-dilihat-jumlah]').textContent = new Intl.NumberFormat('id-ID').format(dilihat);
-          wadah.hidden = false;
         }
       }
     } catch { /* jaringan gagal: dicoba lagi saat berita dibuka kembali */ }

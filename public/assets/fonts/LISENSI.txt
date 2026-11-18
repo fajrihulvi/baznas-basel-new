@@ -1,0 +1,10 @@
+Font di folder ini di-host sendiri (tanpa Google Fonts) dan dipangkas ke huruf Latin + rentang ketebalan yang dipakai:
+
+- roboto-v51-latin-400-800.woff2      — Roboto (Google Fonts v51), variabel wght 400–800. Nama situs & tagline di header.
+- montserrat-v31-latin-400-700.woff2  — Montserrat (Google Fonts v31), variabel wght 400–700. Teks bilah menu & panel menu HP.
+
+Keduanya berlisensi SIL Open Font License 1.1 — https://openfontlicense.org
+Roboto © 2011 The Roboto Project Authors. Montserrat © 2011 The Montserrat Project Authors.
+
+Mengganti/menambah huruf: unduh ulang dari Google Fonts lalu subset (fontTools: instancer + subset, flavor woff2),
+dan ganti nama file (versi baru) agar cache browser 1 tahun tidak menahan file lama.

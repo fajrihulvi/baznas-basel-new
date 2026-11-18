@@ -1,9 +1,9 @@
 <?php
 /**
- * Kartu kabar: gambar 16:9, badge jenis, tanggal, judul 2 baris, ringkasan opsional.
+ * Kartu kabar: gambar 16:9, badge jenis, tanggal, jumlah dilihat, judul 2 baris, ringkasan opsional.
  *
  * @var App\Core\View $this
- * @var array{judul: string, slug: string, jenis: string, tgl: string, foto: ?string, foto_w: ?int, foto_h: ?int, ringkasan?: ?string} $post
+ * @var array{judul: string, slug: string, jenis: string, tgl: string, foto: ?string, foto_w: ?int, foto_h: ?int, ringkasan?: ?string, views?: int} $post
  * @var string|null $sizes     atribut sizes gambar (default untuk kartu carousel/grid)
  * @var bool|null   $ringkasan tampilkan ringkasan
  * @var string|null $heading   tag judul (default h3)
@@ -24,8 +24,12 @@ $h = $heading ?? 'h3';
         <span class="absolute top-3 left-3"><?= $this->insert('components/badge', ['label' => $jenisLabel[$post['jenis']] ?? 'Kabar', 'variant' => 'putih']) ?></span>
     </div>
     <div class="flex flex-1 flex-col p-4">
-        <p class="flex items-center gap-1.5 text-xs text-muted">
-            <?= icon('calendar', 'size-4') ?><time datetime="<?= e($post['tgl']) ?>"><?= e(tgl_id($post['tgl'])) ?></time>
+        <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <span class="inline-flex items-center gap-1.5"><?= icon('calendar', 'size-4') ?><time datetime="<?= e($post['tgl']) ?>"><?= e(tgl_id($post['tgl'])) ?></time></span>
+            <?php /* isset: data cache beranda lama (±10 menit setelah pembaruan kode) belum memuat views */ ?>
+            <?php if (isset($post['views'])): ?>
+            <span class="inline-flex items-center gap-1.5"><?= icon('eye', 'size-4') ?><span style="font-variant-numeric: tabular-nums"><?= e(number_format((int) $post['views'], 0, ',', '.')) ?> dilihat</span></span>
+            <?php endif ?>
         </p>
         <<?= $h ?> class="mt-1.5 line-clamp-2 font-bold leading-snug text-ink group-hover:text-primary">
             <a href="<?= e(url('berita/' . $post['slug'])) ?>" class="after:absolute after:inset-0"><?= e($post['judul']) ?></a>
