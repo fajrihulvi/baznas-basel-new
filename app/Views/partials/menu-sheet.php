@@ -1,6 +1,8 @@
 <?php
 /**
- * Panel menu HP (< lg): masuk dari kiri, hijau tua transparan, grup bisa dibuka-tutup.
+ * Panel menu HP (< lg): masuk dari kiri, hijau tua transparan. Home, Tentang Kami (/tentang), Layanan (/layanan),
+ * Program (/program), Arsip (/arsip) = tautan langsung. Item 'dari' (grup <details> dengan sub-menu desktop) tetap
+ * didukung bila ditambahkan lagi di config/menu.php. Menu yang sedang dibuka berlatar kuning.
  * Dibuka tombol [data-sheet-open] (bilah header & Bottom Navigation). Isi dari config/menu.php → 'sheet'.
  *
  * @var App\Core\View $this
@@ -26,16 +28,19 @@ $aktif = static fn (string $url): bool => $url === $path || ($url !== '/' && !st
 
         <nav aria-label="Menu" class="flex-1 overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <ul>
-                <?php foreach (Navigation::sheet() as $grup): ?>
-                <?php $grupAktif = (bool) array_filter($grup['item'], static fn (array $i): bool => $aktif($i['url'])); ?>
+                <?php foreach (Navigation::sheet() as $menu): ?>
                 <li>
-                    <details class="group"<?= $grupAktif ? ' open' : '' ?>>
-                        <summary class="flex min-h-16 cursor-pointer items-center justify-between gap-3 px-6 text-lg font-semibold <?= $grupAktif ? 'bg-accent text-ink' : 'hover:bg-white/10' ?>">
-                            <?= e($grup['judul']) ?>
+                    <?php if ($menu['url'] !== null): ?>
+                    <a href="<?= e(url($menu['url'])) ?>"<?= $menu['aktif'] ? ' aria-current="page"' : '' ?>
+                       class="flex min-h-16 items-center px-6 text-lg font-semibold <?= $menu['aktif'] ? 'bg-accent text-ink' : 'hover:bg-white/10' ?>"><?= e($menu['label']) ?></a>
+                    <?php else: ?>
+                    <details class="group"<?= $menu['aktif'] ? ' open' : '' ?>>
+                        <summary class="flex min-h-16 cursor-pointer items-center justify-between gap-3 px-6 text-lg font-semibold <?= $menu['aktif'] ? 'bg-accent text-ink' : 'hover:bg-white/10' ?>">
+                            <?= e($menu['label']) ?>
                             <?= icon('caret', 'size-5 shrink-0 transition-transform group-open:rotate-180') ?>
                         </summary>
                         <ul class="bg-black/25 py-1">
-                            <?php foreach ($grup['item'] as $item): ?>
+                            <?php foreach ($menu['anak'] as $item): ?>
                             <?php $ini = $aktif($item['url']); ?>
                             <li>
                                 <a href="<?= e(url($item['url'])) ?>"
@@ -45,6 +50,7 @@ $aktif = static fn (string $url): bool => $url === $path || ($url !== '/' && !st
                             <?php endforeach ?>
                         </ul>
                     </details>
+                    <?php endif ?>
                 </li>
                 <?php endforeach ?>
             </ul>

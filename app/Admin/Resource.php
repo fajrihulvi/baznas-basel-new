@@ -81,7 +81,8 @@ final class Resource
     public function tautan(array $baris): ?string
     {
         $pola = $this->def['tautan'] ?? null;
-        if ($pola === null || (isset($baris['publish']) && $baris['publish'] !== 'Y')) {
+        $syarat = $this->def['tautan_jika'] ?? null; // kolom yang harus bernilai (mis. 'donasi' = hanya banner donasi)
+        if ($pola === null || (isset($baris['publish']) && $baris['publish'] !== 'Y') || ($syarat !== null && empty($baris[$syarat]))) {
             return null;
         }
 

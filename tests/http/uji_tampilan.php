@@ -100,7 +100,7 @@ try {
     preg_match('#<nav aria-label="Navigasi bawah".*?</nav>#s', $h, $nav);
     $nav = $nav[0] ?? '';
     $cek('bottom nav: label baru & gambar unggahan tampil (cache site langsung terhapus)', str_contains($nav, 'Program Kami') && str_contains($nav, 'uploads/ikon-nav/' . substr($ikon, 0, -4)));
-    $cek('di beranda ikon Program tidak aktif → keabu-abuan (grayscale), berwarna saat hover', preg_match('#<img[^>]*ikon-nav[^>]*class="[^"]*grayscale[^"]*group-hover:grayscale-0#', $nav) === 1);
+    $cek('di beranda ikon slot Layanan tidak aktif tetap berwarna asli (tanpa grayscale)', preg_match('#<img[^>]*ikon-nav[^>]*class="(?![^"]*grayscale)[^"]*"#', $nav) === 1 && !str_contains($nav, 'grayscale'));
     preg_match('#<nav aria-label="Navigasi bawah".*?</nav>#s', req($jP, 'GET', "$base/layanan")['body'], $navProgram);
     $cek('di /layanan ikon slot Layanan aktif → berwarna penuh + animasi hover', preg_match('#<img[^>]*ikon-nav[^>]*class="(?![^"]*grayscale)[^"]*group-hover:scale-115#', $navProgram[0] ?? '') === 1);
     $cek('ikon lain (Beranda, Kabar, Menu) tetap SVG bawaan', substr_count($nav, '<svg class="') >= 4);
@@ -120,9 +120,95 @@ try {
     $cek('bilah bawah: Beranda, Layanan (/layanan), Bayar Zakat, Program (/program); Kabar tidak ada', $navUrut === ['/', '/layanan', '/bayar-zakat', '/program']
         && str_contains($nav, 'Layanan') && !str_contains($nav, '>Kabar<') && !str_contains($nav, '/berita"'), implode(' ', $navUrut));
     $lay = req($jP, 'GET', "$base/layanan")['body'];
-    $cek('/layanan berisi 4 ikon: Bayar Zakat, Kalkulator, Konfirmasi, Rekening', substr_count($lay, 'rounded-2xl bg-primary/10') === 4
+    preg_match('#<ul class="grid grid-cols-2 gap-3 sm:grid-cols-4.*?</ul>#s', $lay, $ikonLay); // daftar ikon saja (bukan kartu kegiatan di bawahnya)
+    $cek('/layanan berisi 4 ikon: Bayar Zakat, Kalkulator, Konfirmasi, Rekening', substr_count($ikonLay[0] ?? '', 'rounded-2xl bg-primary/10') === 4
         && str_contains($lay, '/kalkulator-zakat"') && str_contains($lay, '/konfirmasi"') && str_contains($lay, '/rekening"'));
     $cek('beranda tanpa "Aksi cepat" (dipindah ke /layanan)', !str_contains(req($jP, 'GET', "$base/")['body'], 'aria-label="Aksi cepat"'));
+    preg_match('#id="judul-zakat".*?</ul>#s', req($jP, 'GET', "$base/")['body'], $kenali);
+    $jmlFotoZakat = (int) $pdo->query("SELECT COUNT(*) FROM deskripsi_zakat WHERE foto IS NOT NULL AND foto <> ''")->fetchColumn();
+    $cek('Kenali Zakat: kartu memakai foto Penjelasan Zakat (uploads/zakat), bukan ikon buku', $jmlFotoZakat > 0
+        && substr_count($kenali[0] ?? '', '/uploads/zakat/') >= $jmlFotoZakat && str_contains($kenali[0] ?? '', 'aspect-[2/1]'), "$jmlFotoZakat foto");
+    $prof = req($jP, 'GET', "$base/tentang")['body'];
+    preg_match('#<ul class="mt-8 grid.*?</ul>#s', $prof, $gridProf);
+    $cek('/tentang = Profil Kami: kartu Profil & Visi dan Misi saja (tanpa Amil, Testimoni, Kontak) + Bagikan', str_contains($prof, '>Profil Kami</h1>')
+        && str_contains($gridProf[0] ?? '', '/tentang/profil"') && str_contains($gridProf[0] ?? '', '/tentang/visi-misi"')
+        && !str_contains($gridProf[0] ?? '', '/amil"') && !str_contains($gridProf[0] ?? '', '/testimoni"') && !str_contains($gridProf[0] ?? '', '#kontak"')
+        && str_contains($prof, 'Bagikan ke WhatsApp'));
+    preg_match('#id="judul-program-kami".*?</section>#s', $prof, $progKami);
+    $cek('/tentang: daftar Program Kami (5 pilar → /program/{slug}) di bawah kartu profil', substr_count($progKami[0] ?? '', 'href="' . $base . '/program/') === 5
+        && strpos($prof, 'id="judul-program-kami"') > strpos($prof, '/tentang/visi-misi"'));
+    preg_match('#id="judul-kegiatan-kami".*?</section>#s', $prof, $kegKami);
+    $jmlKegiatan = (int) $pdo->query("SELECT COUNT(*) FROM sub_program s JOIN kategori_program k USING (id_kategori_program) WHERE s.slug <> '' AND k.slug IS NOT NULL")->fetchColumn();
+    $cek('/tentang: Kegiatan Kami 2 kolom di bawah Program Kami (semua kegiatan → /program/{pilar}?sub=)', $jmlKegiatan > 0
+        && substr_count($kegKami[0] ?? '', '?sub=') === $jmlKegiatan && str_contains($kegKami[0] ?? '', 'grid grid-cols-2')
+        && strpos($prof, 'id="judul-kegiatan-kami"') > strpos($prof, 'id="judul-program-kami"'), "$jmlKegiatan kegiatan");
+
+    // /tentang/{slug}: gambar halaman (admin → Halaman → Gambar kartu) tampil di atas isi; tanpa gambar → tidak ada <figure>
+    $hlm = $pdo->query("SELECT id, slug, gambar, gambar_w, gambar_h, updated_at FROM halaman WHERE grup = 'tentang' AND publish = 'Y' ORDER BY urutan, id LIMIT 1")->fetch();
+    if ($hlm) {
+        $gbrUji = 'ujihalaman-' . bin2hex(random_bytes(4)) . '.jpg';
+        @mkdir("$proyek/public/uploads/halaman", 0755, true);
+        $sumberFoto = glob("$proyek/public/uploads/post/*.jpg")[0] ?? null;
+        if ($sumberFoto !== null) { copy($sumberFoto, "$proyek/public/uploads/halaman/$gbrUji"); }
+        try {
+            $tanpa = req($jP, 'GET', "$base/tentang/{$hlm['slug']}")['body'];
+            $pdo->prepare('UPDATE halaman SET gambar = ?, gambar_w = 800, gambar_h = 600, updated_at = updated_at WHERE id = ?')->execute([$gbrUji, $hlm['id']]);
+            foreach (glob("$proyek/storage/cache/*.cache") ?: [] as $c) { unlink($c); }
+            $dengan = req($jP, 'GET', "$base/tentang/{$hlm['slug']}")['body'];
+            $posGbr = strpos($dengan, "/uploads/halaman/$gbrUji");
+            $cek('/tentang/{slug}: gambar halaman tampil di atas isi (tanpa gambar → tidak ada figure)', $posGbr !== false
+                && $posGbr < strpos($dengan, 'class="konten text-ink"') && !str_contains($tanpa, '/uploads/halaman/') && str_contains($dengan, 'fetchpriority="high"'));
+        } finally {
+            $pdo->prepare('UPDATE halaman SET gambar = ?, gambar_w = ?, gambar_h = ?, updated_at = ? WHERE id = ?')
+                ->execute([$hlm['gambar'], $hlm['gambar_w'], $hlm['gambar_h'], $hlm['updated_at'], $hlm['id']]);
+            @unlink("$proyek/public/uploads/halaman/$gbrUji");
+            foreach (glob("$proyek/storage/cache/*.cache") ?: [] as $c) { unlink($c); }
+        }
+    }
+    preg_match('#<dialog id="menu-sheet".*?</dialog>#s', $prof, $panel);
+    $cek('panel menu HP: Layanan, Program & Arsip = tautan langsung (tanpa dropdown)',
+        (bool) preg_match('#<a href="[^"]*/layanan"[^>]*>Layanan</a>#', $panel[0] ?? '') && (bool) preg_match('#<a href="[^"]*/program"[^>]*>Program</a>#', $panel[0] ?? '')
+        && (bool) preg_match('#<a href="[^"]*/arsip"[^>]*>Arsip</a>#', $panel[0] ?? '') && !str_contains($panel[0] ?? '', '<summary'));
+
+    // /arsip: data galeri sementara (13 baris → 2 halaman @10), cari judul, Ayo Tunaikan Zakat; dihapus lagi
+    $fotoUji = 'ujiarsip-' . bin2hex(random_bytes(4)) . '.jpg';
+    @mkdir("$proyek/public/uploads/galeri", 0755, true);
+    $sumberFoto = glob("$proyek/public/uploads/post/*.jpg")[0] ?? null;
+    if ($sumberFoto !== null) { copy($sumberFoto, "$proyek/public/uploads/galeri/$fotoUji"); }
+    $tambahGaleri = $pdo->prepare("INSERT INTO galeri (judul, jenis, foto, tgl, publish) VALUES (?, 'foto', ?, ?, 'Y')");
+    try {
+        for ($i = 1; $i <= 13; $i++) {
+            $tambahGaleri->execute([$i === 7 ? 'Santunan Uji Arsip Lansia' : "Kegiatan Uji Arsip $i", $fotoUji, date('Y-m-d', strtotime("-$i day"))]);
+        }
+        $ars = req($jP, 'GET', "$base/arsip")['body'];
+        $ars2 = req($jP, 'GET', "$base/arsip?hal=2")['body'];
+        $arsCari = req($jP, 'GET', "$base/arsip?q=" . rawurlencode('santunan uji'))['body'];
+        $jmlAsli = (int) $pdo->query("SELECT COUNT(*) FROM galeri WHERE publish = 'Y' AND judul NOT LIKE '%Uji Arsip%'")->fetchColumn();
+        $cek('/arsip: daftar galeri 10 per halaman + pagination, form cari, Ayo Tunaikan Zakat di bawahnya', substr_count($ars, "/uploads/galeri/") >= 10
+            && str_contains($ars, 'hal=2') && str_contains($ars, 'name="q"') && str_contains($ars, 'Bagikan ke WhatsApp')
+            && strpos($ars, 'id="judul-ayo-tunaikan"') > strpos($ars, 'id="cari-arsip"') && strpos($ars, 'id="cari-arsip"') > strpos($ars, 'Kegiatan Uji Arsip'));
+        $cek('/arsip?hal=2 berisi sisa galeri', $jmlAsli > 0 || substr_count($ars2, 'Uji Arsip') === 3, (string) substr_count($ars2, 'Uji Arsip'));
+        $cek('/arsip?q= mencari judul galeri (tanpa beda huruf besar/kecil) & tidak diindeks', str_contains($arsCari, 'Santunan Uji Arsip Lansia')
+            && !str_contains($arsCari, 'Kegiatan Uji Arsip') && str_contains($arsCari, 'noindex') && str_contains($arsCari, 'Hapus pencarian'));
+        $cek('/arsip?q= tanpa hasil → pesan "Arsip tidak ditemukan"', str_contains(req($jP, 'GET', "$base/arsip?q=zzqqxx")['body'], 'Arsip tidak ditemukan'));
+    } finally {
+        $pdo->exec("DELETE FROM galeri WHERE judul LIKE '%Uji Arsip%'");
+        @unlink("$proyek/public/uploads/galeri/$fotoUji");
+        foreach (glob("$proyek/public/uploads/galeri/" . pathinfo($fotoUji, PATHINFO_FILENAME) . '-*') ?: [] as $x) { unlink($x); }
+    }
+    $lay2 = req($jP, 'GET', "$base/layanan")['body'];
+    $jmlTunaikan = (int) $pdo->query("SELECT LEAST(COUNT(*), 4) FROM layanan WHERE publish = 'Y'")->fetchColumn();
+    preg_match('#id="judul-tunaikan-zakat".*?</section>#s', $lay2, $tunaikan);
+    $cek('/layanan: kartu Tunaikan Zakat 2 kolom + Kegiatan BAZNAS di bawahnya', substr_count($tunaikan[0] ?? '', '<li>') === $jmlTunaikan && str_contains($tunaikan[0] ?? '', 'grid grid-cols-2')
+        && strpos($lay2, 'id="judul-kegiatan-baznas"') > strpos($lay2, 'id="judul-tunaikan-zakat"') && substr_count($lay2, '?sub=') === $jmlKegiatan, "$jmlTunaikan kartu");
+    $prog2 = req($jP, 'GET', "$base/program")['body'];
+    preg_match('#id="judul-kegiatan-baznas".*?</section>#s', $prog2, $kegProg);
+    $jmlFotoPilar = (int) $pdo->query("SELECT COUNT(*) FROM kategori_program WHERE slug IS NOT NULL AND foto IS NOT NULL AND foto <> ''")->fetchColumn();
+    $cek('/program: kartu pilar bergambar (foto 3:2 / kotak ikon), 1 kolom HP & 3 kolom laptop + Kegiatan BAZNAS', str_contains($prog2, 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3')
+        && substr_count($prog2, 'aspect-[3/2]') >= 5 && substr_count($prog2, '/uploads/pilar/') >= $jmlFotoPilar
+        && substr_count($kegProg[0] ?? '', '?sub=') === $jmlKegiatan);
+    $cek('panel menu HP: Tentang Kami = tautan ke /tentang (tanpa dropdown) & aktif di /tentang', (bool) preg_match('#<a href="[^"]*/tentang" aria-current="page"[^>]*>Tentang Kami</a>#', $panel[0] ?? '')
+        && !preg_match('#<summary[^>]*>\s*Tentang Kami#', $panel[0] ?? ''));
     $cek('body memberi ruang 6rem untuk bilah bawah', str_contains(req($jP, 'GET', "$base/")['body'], 'pb-[calc(6rem+env(safe-area-inset-bottom))]'));
 
     echo "\n== Tunaikan Zakat (beranda)\n";

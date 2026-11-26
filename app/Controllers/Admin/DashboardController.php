@@ -12,6 +12,7 @@ use App\Core\Response;
 use App\Models\KonfirmasiPembayaran;
 use App\Models\Pembayaran;
 use App\Models\Testimoni;
+use App\Services\StatistikPenerimaManfaatService;
 use App\Services\StatistikPengumpulanService;
 use App\Services\StatistikZakatService;
 use App\Services\ZakatCalculator;
@@ -24,9 +25,11 @@ final class DashboardController extends Controller
         $statistik = [
             'statistik'   => StatistikZakatService::untuk($request),
             'pengumpulan' => self::pengumpulan($request),
-            // Dua filter terpisah di satu halaman: masing-masing mengirim ulang parameter filter lainnya
+            'penerima'    => StatistikPenerimaManfaatService::untuk($request),
+            // Tiga filter terpisah di satu halaman: masing-masing mengirim ulang parameter filter lainnya
             'filterZakat'       => self::query($request, ['periode', 'dari', 'sampai']),
             'filterPengumpulan' => self::query($request, ['pg_tahun', 'pg_bulan']),
+            'filterPenerima'    => self::query($request, ['pm_tahun', 'pm_bulan']),
         ];
 
         // Kepala: hanya statistik (tanpa antrean, daftar pembayaran, pintasan yang mengarah ke halaman kelola)

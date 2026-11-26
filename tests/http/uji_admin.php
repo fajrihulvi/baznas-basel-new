@@ -149,6 +149,16 @@ $cek('tautan bukan YouTube ditolak', str_contains($g['body'], 'Tautan YouTube ti
 $r = req($jar, 'POST', "$base/admin/video", ['_token' => $tok(), 'judul' => 'Video Uji F7', 'link' => 'https://youtu.be/rg6aeHegGSA?si=abc', 'tgl' => date('Y-m-d')]);
 $v = $pdo->query("SELECT youtube_id FROM video WHERE judul = 'Video Uji F7'")->fetchColumn();
 $cek('video valid → youtube_id diisi otomatis', $v === 'rg6aeHegGSA', (string) $v);
+// Isian terkode hex dari admin.js (lolos WAF hosting) dibuka kembali oleh Request sebelum validasi
+$r = req($jar, 'POST', "$base/admin/video", ['_token' => $tok(), 'judul' => bin2hex("Video Uji F7 Al-Qur'an 2,5 % x (A + B)"), 'link' => bin2hex('https://youtu.be/rg6aeHegGSA'),
+    'tgl' => date('Y-m-d'), '_hex[0]' => 'judul', '_hex[1]' => 'link']);
+$v = $pdo->query("SELECT youtube_id FROM video WHERE judul = 'Video Uji F7 Al-Qur''an 2,5 % x (A + B)'")->fetchColumn();
+$cek("isian terkode hex (_hex) dibuka kembali: judul berisi Al-Qur'an & 2,5 % x (A + B) tersimpan apa adanya", $r['kode'] === 303 && $v === 'rg6aeHegGSA', (string) $v);
+// Format lama base64 (_b64, admin.js versi sebelumnya di cache browser) tetap diterima
+$r = req($jar, 'POST', "$base/admin/video", ['_token' => $tok(), 'judul' => base64_encode("Video Uji F7 Al-Qur'an"), 'link' => base64_encode('https://youtu.be/rg6aeHegGSA'),
+    'tgl' => date('Y-m-d'), '_b64[0]' => 'judul', '_b64[1]' => 'link']);
+$v = $pdo->query("SELECT youtube_id FROM video WHERE judul = 'Video Uji F7 Al-Qur''an'")->fetchColumn();
+$cek('format lama base64 (_b64) tetap dibuka kembali', $r['kode'] === 303 && $v === 'rg6aeHegGSA', (string) $v);
 
 $isian = ['_token' => $tok()];
 foreach ($settingAwal as $k => $n) { $isian[$k] = (string) $n; }
@@ -233,7 +243,7 @@ $pdo->exec("DELETE FROM konfirmasi_pembayaran WHERE kode_pembayaran = " . $pdo->
 $pdo->exec("DELETE FROM pembayaran WHERE kode_pembayaran = " . $pdo->quote($KODE));
 $pdo->exec("DELETE FROM post WHERE judul IN ('Kabar Uji Fase Tujuh Admin', 'Kabar Uji F7 Baru')");
 $pdo->exec("DELETE FROM redirect WHERE dari LIKE '/berita/kabar-uji-%' OR ke LIKE '/berita/kabar-uji-%'");
-$pdo->exec("DELETE FROM video WHERE judul = 'Video Uji F7'");
+$pdo->exec("DELETE FROM video WHERE judul IN ('Video Uji F7', 'Video Uji F7 Al-Qur''an', 'Video Uji F7 Al-Qur''an 2,5 % x (A + B)')");
 $pdo->exec("DELETE FROM banner WHERE judul = 'Banner Uji F7'");
 $pdo->prepare('DELETE FROM user WHERE username = ?')->execute([$USER]);
 $up = $pdo->prepare('UPDATE setting SET nilai = ? WHERE kunci = ?');

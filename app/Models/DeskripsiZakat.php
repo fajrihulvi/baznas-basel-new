@@ -16,7 +16,7 @@ final class DeskripsiZakat
     public static function daftar(): array
     {
         return Database::fetchAll(
-            'SELECT TRIM(judul) AS judul, slug FROM deskripsi_zakat ORDER BY id_deskripsi_zakat'
+            'SELECT TRIM(judul) AS judul, slug, foto FROM deskripsi_zakat ORDER BY id_deskripsi_zakat'
         );
     }
 

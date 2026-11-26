@@ -16,7 +16,7 @@ return [
             ['label' => 'Testimoni', 'url' => '/testimoni'],
             ['label' => 'Kontak', 'url' => '#kontak'],
         ]],
-        ['label' => 'Layanan', 'aktif' => ['/zakat', '/kalkulator-zakat', '/bayar-zakat', '/konfirmasi', '/rekening'], 'anak' => [
+        ['label' => 'Layanan', 'aktif' => ['/layanan', '/zakat', '/kalkulator-zakat', '/bayar-zakat', '/konfirmasi', '/rekening'], 'anak' => [
             ['label' => 'Bayar Zakat', 'url' => '/bayar-zakat'],
             ['label' => 'Kalkulator Zakat', 'url' => '/kalkulator-zakat'],
             ['label' => 'Konfirmasi Pembayaran', 'url' => '/konfirmasi'],
@@ -52,25 +52,16 @@ return [
         ['label' => 'Menu', 'url' => null, 'ikon' => 'menu', 'svg' => 'menu'],
     ],
 
-    // Isi bottom sheet "Menu"
+    // Panel menu HP (partials/menu-sheet), pola situs BAZNAS kabupaten.
+    // 'url' = tautan langsung (opsional 'aktif' = awalan path); 'dari' = ambil sub-menu & penanda aktif dari item 'utama' berlabel sama (satu sumber dengan menu desktop).
     'sheet' => [
-        ['judul' => 'Layanan Zakat', 'item' => [
-            ['label' => 'Kalkulator', 'url' => '/kalkulator-zakat', 'ikon' => 'calculator'],
-            ['label' => 'Konfirmasi', 'url' => '/konfirmasi', 'ikon' => 'upload'],
-            ['label' => 'Rekening', 'url' => '/rekening', 'ikon' => 'bank'],
-            ['label' => 'Penjelasan Zakat', 'url' => '/zakat', 'ikon' => 'book'],
-        ]],
-        ['judul' => 'Informasi', 'item' => [
-            ['label' => 'Regulasi', 'url' => '/regulasi', 'ikon' => 'scale'],
-            ['label' => 'Laporan', 'url' => '/laporan', 'ikon' => 'chart'],
-            ['label' => 'Video', 'url' => '/video', 'ikon' => 'video'],
-            ['label' => 'Galeri', 'url' => '/galeri', 'ikon' => 'image'],
-        ]],
-        ['judul' => 'Tentang Kami', 'item' => [
-            ['dinamis' => 'halaman:tentang', 'ikon' => 'info'],
-            ['label' => 'Amil', 'url' => '/amil', 'ikon' => 'users'],
-            ['label' => 'Testimoni', 'url' => '/testimoni', 'ikon' => 'star'],
-            ['label' => 'Kontak', 'url' => '#kontak', 'ikon' => 'phone'],
-        ]],
+        ['label' => 'Home', 'url' => '/'],
+        // Tanpa dropdown: langsung ke halaman Profil Kami (kartu tiap item menu Tentang); aktif juga di sub-halamannya
+        ['label' => 'Tentang Kami', 'url' => '/tentang', 'aktif' => ['/tentang', '/amil', '/testimoni']],
+        // Tanpa dropdown: /layanan (ikon layanan + kartu Tunaikan Zakat + Kegiatan BAZNAS), /program (5 pilar + Kegiatan BAZNAS)
+        ['label' => 'Layanan', 'url' => '/layanan', 'aktif' => ['/layanan']],
+        ['label' => 'Program', 'url' => '/program', 'aktif' => ['/program']],
+        // Tanpa dropdown: /arsip (daftar galeri + cari judul + Ayo Tunaikan Zakat)
+        ['label' => 'Arsip', 'url' => '/arsip', 'aktif' => ['/arsip']],
     ],
 ];

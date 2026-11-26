@@ -3,8 +3,9 @@
  * /tentang/{slug} dan /halaman/{slug} — halaman statis dari tabel `halaman` (konten tersanitasi).
  *
  * @var App\Core\View $this
- * @var array       $halaman  id, grup, judul, slug, konten, updated_at
+ * @var array       $halaman  id, grup, judul, slug, konten, updated_at, gambar, gambar_w, gambar_h (gambar tampil di atas isi)
  * @var list<array> $saudara  halaman terbit lain di grup yang sama (judul, slug)
+ * @var array|null  $penerima laporan penerima manfaat (hanya PenerimaManfaat::SLUG_HALAMAN), di bawah isi
  */
 $tentang = $halaman['grup'] === 'tentang';
 $awalan  = $tentang ? '/tentang/' : '/halaman/';
@@ -39,7 +40,30 @@ if ($tentang) {
     </nav>
     <?php endif ?>
 
-    <div class="konten max-w-3xl text-ink<?= count($navigasi) > 1 ? '' : ' lg:col-span-2' ?>">
-        <?= $halaman['konten'] /* HTML dari admin — wajib disanitasi saat disimpan (Fase 7) */ ?>
+    <div class="min-w-0 max-w-3xl<?= count($navigasi) > 1 ? '' : ' lg:col-span-2' ?>">
+        <?php if (!empty($halaman['gambar'])): ?>
+        <?php /* Gambar halaman (admin → Halaman → Gambar kartu) di atas isi, rasio asli, maks. ±512px di layar lebar */ ?>
+        <figure class="mb-6 max-w-lg overflow-hidden rounded-2xl bg-surface lg:mb-8">
+            <?= img($halaman['gambar'], 'halaman', $halaman['judul'], ['width' => $halaman['gambar_w'], 'height' => $halaman['gambar_h'],
+                'sizes' => '(min-width: 1024px) 512px, calc(100vw - 2rem)', 'eager' => true, 'class' => 'h-auto w-full']) ?>
+        </figure>
+        <?php endif ?>
+        <div class="konten text-ink">
+            <?= $halaman['konten'] /* HTML dari admin — wajib disanitasi saat disimpan (Fase 7) */ ?>
+        </div>
     </div>
 </div>
+
+<?php if (!empty($penerima) && $penerima['total'] > 0): ?>
+<section id="penerima-manfaat" class="mx-auto max-w-6xl scroll-mt-16 px-4 pb-10 lg:pb-14" aria-labelledby="judul-penerima">
+    <div class="border-t border-gray-200 pt-8">
+        <h2 id="judul-penerima" class="text-2xl font-bold text-ink lg:text-3xl">Laporan Penerima Manfaat</h2>
+        <p class="mt-1 text-muted">Akumulasi jumlah penerima manfaat program BAZNAS Kabupaten Bangka Selatan.</p>
+        <?= $this->insert('components/filter-penerima', ['m' => $penerima, 'aksi' => current_path(), 'jangkar' => 'penerima-manfaat']) ?>
+        <div class="mt-5"><?= $this->insert('components/laporan-penerima', ['m' => $penerima, 'id' => 'penerima']) ?></div>
+    </div>
+</section>
+<?php $this->start('scripts') ?>
+<script type="module" src="<?= e(asset('js/grafik.js')) ?>"></script>
+<?php $this->stop() ?>
+<?php endif ?>

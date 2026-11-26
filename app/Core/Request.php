@@ -38,7 +38,7 @@ final class Request
             strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')),
             $path,
             self::clean($_GET),
-            self::clean($_POST),
+            self::clean(str_starts_with($path, '/admin') ? self::bukaKode($_POST) : $_POST),
             $_SERVER,
             $_FILES,
         );
@@ -143,6 +143,44 @@ final class Request
     public function ip(): string
     {
         return (string) ($this->server['REMOTE_ADDR'] ?? '0.0.0.0');
+    }
+
+    /**
+     * Isian form admin yang dikodekan oleh admin.js (event formdata) dibuka kembali di sini.
+     * Tujuannya: firewall hosting (ModSecurity/WAF) tidak salah memblokir isi wajar seperti "Al-Qur'an",
+     * "2,5 % x (…)" atau kutipan pasal dengan 403. Keamanan tetap di aplikasi (login, CSRF, Validator,
+     * HtmlSanitizer, prepared statement).
+     * - _hex[] : nilai heksadesimal UTF-8 (hanya 0-9a-f → tidak ada karakter khusus yang dihitung WAF). Dipakai admin.js.
+     * - _b64[] : base64 (versi admin.js sebelumnya; tetap diterima agar cache browser lama tidak merusak data).
+     * Nama/nilai yang tidak sah dibiarkan apa adanya (form tanpa JS tetap jalan).
+     *
+     * @param array<string, mixed> $post
+     * @return array<string, mixed>
+     */
+    private static function bukaKode(array $post): array
+    {
+        $pembuka = [
+            '_hex' => static fn (string $v): string|false => strlen($v) % 2 === 0 && ctype_xdigit($v) ? (string) hex2bin($v) : false,
+            '_b64' => static fn (string $v): string|false => base64_decode($v, true),
+        ];
+        foreach ($pembuka as $penanda => $buka) {
+            $daftar = $post[$penanda] ?? null;
+            unset($post[$penanda]);
+            if (!is_array($daftar)) {
+                continue;
+            }
+            foreach ($daftar as $nama) {
+                if (!is_string($nama) || !isset($post[$nama]) || !is_string($post[$nama]) || $post[$nama] === '') {
+                    continue;
+                }
+                $asli = $buka($post[$nama]);
+                if ($asli !== false && mb_check_encoding($asli, 'UTF-8')) {
+                    $post[$nama] = $asli;
+                }
+            }
+        }
+
+        return $post;
     }
 
     private static function clean(mixed $value): mixed

@@ -10,9 +10,9 @@ use App\Core\Database;
 final class KategoriProgram
 {
     /**
-     * SELECT * agar tetap jalan sebelum migrasi 011 dijalankan (kolom warna belum ada → null).
+     * SELECT * agar tetap jalan sebelum migrasi 011/017 dijalankan (kolom warna/foto belum ada → null).
      *
-     * @return list<array{id: int, nama: string, label: string, slug: string, deskripsi: ?string, ikon: ?string, warna_latar: ?string, opasitas_latar: ?int}>
+     * @return list<array{id: int, nama: string, label: string, slug: string, deskripsi: ?string, ikon: ?string, foto: ?string, foto_w: ?int, foto_h: ?int, warna_latar: ?string, opasitas_latar: ?int}>
      */
     public static function pilar(): array
     {
@@ -27,6 +27,10 @@ final class KategoriProgram
             'slug'           => (string) $b['slug'],
             'deskripsi'      => $b['deskripsi'],
             'ikon'           => $b['ikon'],
+            // Foto (migrasi 017) untuk daftar Program Kami di /tentang; null bila kolom belum ada
+            'foto'           => $b['foto'] ?? null,
+            'foto_w'         => isset($b['foto_w']) ? (int) $b['foto_w'] : null,
+            'foto_h'         => isset($b['foto_h']) ? (int) $b['foto_h'] : null,
             'warna_latar'    => $b['warna_latar'] ?? null,
             'opasitas_latar' => isset($b['opasitas_latar']) ? (int) $b['opasitas_latar'] : null,
         ], $baris);

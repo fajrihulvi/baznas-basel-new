@@ -9,9 +9,10 @@ declare(strict_types=1);
  * Tipe field: teks, panjang (textarea), html (editor + HtmlSanitizer), angka, rupiah (diketik 1.500.000), tanggal, pilihan,
  *             publish (Y/N), centang (1/0), slug (otomatis dari 'dari'), gambar (+ varian WebP), pdf, dokumen (PDF atau Excel .xlsx/.xls tanpa makro).
  * 'pilihan'  : array nilai => label, atau 'sumber' = SQL "SELECT nilai, label …".
- * 'boleh_kosong' (angka): kosong disimpan NULL, bukan 0. 'geser' (angka): [min, maks, langkah, awal] → penggeser %.
+ * 'persen_dari' (angka): daftar field → persentase otomatis di bawah isian; 'satuan' (jumlah): mis. 'jiwa' (default rupiah).
+ * 'baris' (panjang): tinggi textarea (default 3). 'boleh_kosong' (angka): kosong disimpan NULL, bukan 0. 'geser' (angka): [min, maks, langkah, awal] → penggeser %.
  * Tipe 'warna': pemilih warna #rrggbb + centang "pakai warna bawaan" (NULL); 'pratinjau' => ['opasitas' => field, 'ikon' => [field, folder]].
- * 'kolom'    : kolom di daftar => tipe tampilan (teks|gambar|publish|tanggal|pilihan|centang|rupiah|bulan|format|angka).
+ * 'kolom'    : kolom di daftar => tipe tampilan (teks|gambar|publish|tanggal|pilihan|centang|rupiah|bulan|format|angka|angka_persen = angka + % dari kolom 'total').
  * 'cache'    : kunci cache yang dihapus setelah simpan/hapus (home, site, zakat, sitemap).
  * 'aksi'     : default ['tambah', 'ubah', 'hapus'].
  * 'hook'     : kelas App\Admin\Hook untuk aturan khusus.
@@ -20,16 +21,18 @@ declare(strict_types=1);
 $publish  = ['tipe' => 'publish', 'label' => 'Tampilkan di situs'];
 $urutan   = ['tipe' => 'angka', 'label' => 'Urutan', 'aturan' => 'nullable|between:0,999', 'hint' => 'Angka kecil tampil lebih dulu.'];
 $tanggal  = ['tipe' => 'tanggal', 'label' => 'Tanggal', 'aturan' => 'required|date'];
+$pilarManfaat = array_keys(App\Models\PenerimaManfaat::PROGRAM); // kolom jumlah jiwa per pilar
 // Tautan isian admin: hanya path internal, http(s), WhatsApp/telepon/email (bukan javascript: dsb.)
 $polaTautan = 'regex:#^(/(?!/)|https?://|mailto:|tel:)#i';
 
 return [
     'menu' => [
+        'Donasi'    => ['donasi' => 'Donasi Bantuan'],
         'Zakat'     => ['pembayaran' => 'Pembayaran', 'rekening' => 'Rekening', 'zakat' => 'Penjelasan Zakat', 'layanan' => 'Tunaikan Zakat (Beranda)'],
         'Pengumpulan' => ['pengumpulan' => 'Pengumpulan', 'perangkat-daerah' => 'Perangkat Daerah'],
-        'Penyaluran' => ['distribusi' => 'Distribusi'],
+        'Penyaluran' => ['distribusi' => 'Distribusi', 'penerima-manfaat' => 'Penerima Manfaat'],
         'Konten'    => ['post' => 'Kabar & Kegiatan', 'banner' => 'Banner', 'video' => 'Video', 'galeri' => 'Galeri', 'testimoni' => 'Testimoni', 'mitra' => 'Mitra'],
-        'Program'   => ['pilar' => '5 Pilar', 'sub-program' => 'Sub-program'],
+        'Program'   => ['pilar' => '5 Pilar', 'sub-program' => 'Kegiatan BAZNAS'],
         'Informasi' => ['halaman' => 'Halaman', 'regulasi' => 'Regulasi', 'kategori-regulasi' => 'Kategori Regulasi', 'laporan' => 'Laporan Keuangan', 'amil' => 'Amil'],
         // Tautan Rusak (/admin/tautan-rusak) & Status Sistem (/admin/status) sengaja tidak di menu — buka lewat alamatnya
         'Tampilan'  => ['ikon-navigasi' => 'Ikon Navigasi'],
@@ -69,16 +72,64 @@ return [
         'banner' => [
             'judul' => 'Banner Beranda', 'tunggal' => 'banner', 'tabel' => 'banner', 'pk' => 'id_banner',
             'urut' => 'urutan, tgl DESC, id_banner DESC', 'cari' => ['judul'],
-            'kolom' => ['foto' => 'gambar', 'judul' => 'teks', 'urutan' => 'teks', 'publish' => 'publish'],
+            'keterangan' => 'Banner bergeser di atas beranda. Centang "Banner program donasi" untuk menjadikannya program donasi: banner dapat diklik menuju halaman donasi, programnya tampil di beranda (di bawah Kabar BAZNAS), dan donatur mengisi formulir lalu transfer ke rekening resmi. Data donatur ada di menu Donasi → Donasi Bantuan.',
+            'kolom' => ['foto' => 'gambar', 'judul' => 'teks', 'donasi' => 'centang', 'urutan' => 'teks', 'publish' => 'publish'],
+            'label_kolom' => ['donasi' => 'Donasi'],
+            'tautan' => '/donasi/{donasi_slug}', 'tautan_jika' => 'donasi',
+            'grup' => [
+                'donasi' => ['judul' => 'Detail program donasi', 'tampil_jika' => 'donasi', 'kelas' => 'grid gap-5 sm:grid-cols-2',
+                             'hint' => 'Wajib diisi bila banner ini banner donasi. Donasi hanya bisa diisi antara tanggal dibuka dan ditutup.'],
+            ],
             'field' => [
                 'judul'       => ['tipe' => 'teks', 'label' => 'Judul / teks alternatif', 'aturan' => 'required|max:255', 'hint' => 'Dibacakan pembaca layar & mesin pencari.'],
                 'foto'        => ['tipe' => 'gambar', 'label' => 'Gambar desktop', 'folder' => 'banner', 'wajib' => true, 'hint' => 'Rasio ±16:7, mis. 1600 × 700 px. Hindari teks kecil.'],
                 'foto_mobile' => ['tipe' => 'gambar', 'label' => 'Gambar HP (opsional)', 'folder' => 'banner', 'hint' => 'Rasio 4:3, mis. 1200 × 900 px. Bila semua banner punya gambar HP, beranda di HP memakai rasio 4:3.'],
-                'link'        => ['tipe' => 'teks', 'label' => 'Tautan (opsional)', 'aturan' => ['nullable', 'max:255', $polaTautan], 'hint' => 'Mis. /bayar-zakat atau https://…'],
+                'link'        => ['tipe' => 'teks', 'label' => 'Tautan (opsional)', 'aturan' => ['nullable', 'max:255', $polaTautan], 'hint' => 'Mis. /bayar-zakat atau https://… Diabaikan bila banner donasi (otomatis menuju halaman donasinya).'],
                 'urutan'      => $urutan,
                 'tgl'         => $tanggal,
                 'publish'     => $publish,
+                'donasi'      => ['tipe' => 'centang', 'label' => 'Banner program donasi (banner dapat diklik menuju halaman donasi)'],
+                'donasi_nama'    => ['tipe' => 'teks', 'label' => 'Nama program donasi', 'aturan' => 'nullable|max:150', 'grup' => 'donasi', 'kelas' => 'sm:col-span-2', 'hint' => 'Mis. Bantuan Korban Banjir Toboali.'],
+                'donasi_mulai'   => ['tipe' => 'tanggal', 'label' => 'Tanggal dibuka', 'aturan' => 'nullable|date', 'grup' => 'donasi', 'bawaan' => 'kosong'],
+                'donasi_selesai' => ['tipe' => 'tanggal', 'label' => 'Tanggal ditutup', 'aturan' => 'nullable|date', 'grup' => 'donasi', 'bawaan' => 'kosong'],
+                'donasi_target'  => ['tipe' => 'rupiah', 'label' => 'Target terkumpul', 'aturan' => 'nullable|integer|between:1000,999999999999', 'grup' => 'donasi'],
+                'donasi_minimal' => ['tipe' => 'rupiah', 'label' => 'Nominal donasi minimal', 'aturan' => 'nullable|integer|between:1000,100000000', 'grup' => 'donasi',
+                                     'hint' => 'Kosong = Rp10.000. Pilihan nominal cepat = 2×, 4×, 6×, 8× nominal ini.'],
+                'donasi_terkumpul_luar' => ['tipe' => 'rupiah', 'label' => 'Dana terkumpul di luar formulir (opsional)', 'aturan' => 'nullable|integer|between:0,999999999999', 'grup' => 'donasi', 'kelas' => 'sm:col-span-2',
+                                            'hint' => 'Mis. donasi tunai atau transfer yang tidak lewat formulir situs. Ditambahkan ke total terkumpul.'],
+                'donasi_deskripsi' => ['tipe' => 'html', 'label' => 'Deskripsi program', 'grup' => 'donasi', 'kelas' => 'sm:col-span-2', 'hint' => 'Latar belakang, rencana penyaluran, dan penerima manfaat.'],
+                'donasi_slug'    => ['tipe' => 'slug', 'label' => 'Alamat halaman donasi (slug)', 'dari' => 'donasi_nama', 'maks' => 170, 'grup' => 'donasi', 'kelas' => 'sm:col-span-2',
+                                     'hint' => 'Kosongkan untuk dibuat otomatis dari nama program. Halaman: /donasi/{slug}.'],
             ],
+            'hook'  => App\Admin\BannerHook::class,
+            'cache' => ['home', 'sitemap'],
+        ],
+
+        // Donatur program donasi (formulir /donasi/{slug}/bayar). Data pribadi — tidak pernah tampil di situs.
+        'donasi' => [
+            'judul' => 'Donasi Bantuan', 'tunggal' => 'donasi', 'tabel' => 'donasi', 'pk' => 'id',
+            'urut' => "status = 'menunggu' DESC, waktu DESC, id DESC", 'cari' => ['kode', 'nama', 'no_hp', 'email'],
+            'cari_sql' => ['id_banner IN (SELECT id_banner FROM banner WHERE donasi_nama LIKE ?)', 'status LIKE ?'],
+            'keterangan' => 'Donatur yang mengisi formulir donasi di situs. Setelah transfer, donatur mengonfirmasi lewat WhatsApp (nomor di Pengaturan). Cocokkan transfer di rekening dengan kode donasi, lalu Ubah → Status "Terverifikasi": nominalnya masuk ke total terkumpul program. Doa yang dicentang "Tampilkan doa" muncul di halaman program (nama atau "Hamba Allah", tanpa nominal & kontak). Cari menurut kode, nama, nomor, nama program, atau status.',
+            'kolom' => ['waktu' => 'tanggal', 'kode' => 'teks', 'id_banner' => 'pilihan', 'nama' => 'teks', 'no_hp' => 'teks', 'nominal' => 'rupiah', 'status' => 'pilihan'],
+            'label_kolom' => ['waktu' => 'Tanggal', 'kode' => 'Kode', 'id_banner' => 'Program', 'nama' => 'Donatur', 'no_hp' => 'WhatsApp'],
+            'field' => [
+                'status'      => ['tipe' => 'pilihan', 'label' => 'Status', 'aturan' => 'required', 'pilihan' => App\Models\Donasi::STATUS, 'bawaan' => 'menunggu',
+                                  'hint' => 'Terverifikasi = transfer sudah diterima; nominal masuk ke total terkumpul program.'],
+                'id_banner'   => ['tipe' => 'pilihan', 'label' => 'Program donasi', 'aturan' => 'required', 'kosong' => 'Pilih program…',
+                                  'sumber' => "SELECT id_banner, donasi_nama FROM banner WHERE donasi = 1 AND donasi_nama IS NOT NULL ORDER BY donasi_mulai DESC, id_banner DESC"],
+                'nominal'     => ['tipe' => 'rupiah', 'label' => 'Nominal', 'aturan' => 'required|integer|between:1000,10000000000', 'hint' => 'Sesuaikan dengan nominal yang benar-benar diterima.'],
+                'nama'        => ['tipe' => 'teks', 'label' => 'Nama donatur', 'aturan' => 'required|max:100'],
+                'anonim'      => ['tipe' => 'centang', 'label' => 'Tampilkan sebagai Hamba Allah'],
+                'no_hp'       => ['tipe' => 'teks', 'label' => 'Nomor WhatsApp', 'aturan' => 'required|max:20'],
+                'email'       => ['tipe' => 'teks', 'label' => 'Email', 'aturan' => 'nullable|email|max:100'],
+                'id_rekening' => ['tipe' => 'pilihan', 'label' => 'Rekening tujuan', 'kosong' => '— Tidak tercatat —',
+                                  'sumber' => "SELECT id_rekening, CONCAT(TRIM(nama_bank), ' — ', nomor_rekening) FROM rekening ORDER BY id_rekening"],
+                'doa'         => ['tipe' => 'panjang', 'label' => 'Doa', 'aturan' => 'nullable|max:500'],
+                'doa_tampil'  => ['tipe' => 'centang', 'label' => 'Tampilkan doa di halaman program (setelah terverifikasi)', 'bawaan' => '1'],
+                'catatan'     => ['tipe' => 'panjang', 'label' => 'Catatan internal', 'aturan' => 'nullable|max:2000'],
+            ],
+            'hook'  => App\Admin\DonasiHook::class,
             'cache' => ['home'],
         ],
 
@@ -104,14 +155,17 @@ return [
         'pilar' => [
             'judul' => '5 Pilar Program', 'tunggal' => 'pilar', 'tabel' => 'kategori_program', 'pk' => 'id_kategori_program',
             'urut' => 'urutan, id_kategori_program', 'cari' => ['label'], 'aksi' => ['ubah'],
-            'kolom' => ['ikon' => 'gambar', 'label' => 'teks', 'kategori_program' => 'teks', 'slug' => 'teks', 'urutan' => 'teks'],
+            'kolom' => ['ikon' => 'gambar', 'foto' => 'gambar', 'label' => 'teks', 'kategori_program' => 'teks', 'slug' => 'teks', 'urutan' => 'teks'],
             'tautan' => '/program/{slug}',
             'field' => [
                 'label'            => ['tipe' => 'teks', 'label' => 'Nama pilar', 'aturan' => 'required|max:100', 'hint' => 'Mis. Basel Sehat.'],
                 'kategori_program' => ['tipe' => 'teks', 'label' => 'Bidang', 'aturan' => 'required|max:100', 'hint' => 'Mis. Kesehatan.'],
-                'deskripsi'        => ['tipe' => 'panjang', 'label' => 'Deskripsi singkat', 'aturan' => 'nullable|max:255'],
+                'deskripsi'        => ['tipe' => 'panjang', 'label' => 'Deskripsi', 'aturan' => 'nullable|max:5000', 'baris' => 10,
+                                       'hint' => 'Boleh panjang dan beberapa paragraf (tekan Enter untuk paragraf baru), maks. 5.000 huruf. Ditampilkan utuh di halaman pilar (/program/…); di kartu & daftar hanya beberapa baris awal.'],
                 'ikon'             => ['tipe' => 'gambar', 'label' => 'Ikon (opsional)', 'folder' => 'pilar',
                                        'hint' => 'PNG atau WebP berlatar transparan, persegi, minimal 256 × 256 px. Kosongkan untuk memakai ikon bawaan.'],
+                'foto'             => ['tipe' => 'gambar', 'label' => 'Foto program (opsional)', 'folder' => 'pilar', 'kolom_w' => 'foto_w', 'kolom_h' => 'foto_h',
+                                       'hint' => 'Tampil selebar halaman di atas deskripsi pada halaman pilar (/program/…), dan sebagai gambar kecil di daftar "Program Kami" halaman Tentang Kami. Mendatar 3:2, mis. 1536 × 1024 px; minimal lebar 1200 px agar tajam. Kosong = tanpa foto (kotak ikon di daftar).'],
                 'warna_latar'      => ['tipe' => 'warna', 'label' => 'Warna kotak ikon', 'aturan' => ['nullable', 'regex:/^#[0-9a-f]{6}$/i'],
                                        'pratinjau' => ['opasitas' => 'opasitas_latar', 'ikon' => ['ikon', 'pilar']],
                                        'hint' => 'Latar kotak bersudut bulat di belakang ikon (beranda & halaman Program). Bawaan: hijau muda (ikon unggahan) / hijau BAZNAS (ikon bawaan).'],
@@ -183,7 +237,7 @@ return [
                 'tgl'            => ['tipe' => 'tanggal', 'label' => 'Tanggal penyaluran', 'aturan' => 'required|date|before_or_equal:today'],
                 'id_sub_program' => ['tipe' => 'pilihan', 'label' => 'Pilar — sub-program', 'aturan' => 'required', 'kosong' => 'Pilih sub-program…',
                                      'sumber' => "SELECT s.id_sub_program, CONCAT(k.label, ' — ', s.sub_program) FROM sub_program s JOIN kategori_program k ON k.id_kategori_program = s.id_kategori_program ORDER BY k.urutan, s.id_sub_program",
-                                     'hint' => 'Pilar otomatis mengikuti sub-program. Sub-program dikelola di menu Program → Sub-program.'],
+                                     'hint' => 'Pilar otomatis mengikuti sub-program. Sub-program dikelola di menu Program → Kegiatan BAZNAS.'],
                 'nama_program'   => ['tipe' => 'teks', 'label' => 'Nama program / kegiatan', 'aturan' => 'required|min:5|max:200', 'hint' => 'Mis. Bantuan biaya berobat warga Kec. Toboali.'],
                 'nominal'        => ['tipe' => 'rupiah', 'label' => 'Nominal disalurkan', 'aturan' => 'required|integer|between:1,999999999999'],
                 'sumber_dana'    => ['tipe' => 'pilihan', 'label' => 'Sumber dana', 'aturan' => 'required', 'pilihan' => App\Models\Distribusi::SUMBER, 'bawaan' => 'zakat'],
@@ -201,11 +255,40 @@ return [
             'cache' => [],
         ],
 
+        // Jumlah penerima manfaat per bulan untuk 5 pilar (agregat, tanpa data pribadi). Laporan: dasbor & /tentang/sistem-pelaporan-zakat
+        'penerima-manfaat' => [
+            'judul' => 'Penerima Manfaat', 'tunggal' => 'penerima manfaat', 'tabel' => 'penerima_manfaat', 'pk' => 'id',
+            'urut' => 'periode DESC', 'cari' => ['keterangan', 'petugas'],
+            'cari_sql' => ["DATE_FORMAT(periode, '%Y-%m') LIKE ?"],
+            'keterangan' => 'Jumlah penerima manfaat per bulan untuk 5 pilar program (satu data per bulan). Persentase dihitung otomatis. Tabel & grafik akumulasinya tampil di Dasbor (juga untuk akun Kepala) dan di situs, di bawah isi halaman Tentang → Sistem Pelaporan Zakat. Cari menurut tahun, mis. 2026 atau 2026-10.',
+            'kolom' => ['periode' => 'bulan', 'peduli' => 'angka_persen', 'sehat' => 'angka_persen', 'makmur' => 'angka_persen', 'cerdas' => 'angka_persen', 'taqwa' => 'angka_persen', 'total' => 'angka'],
+            'label_kolom' => ['periode' => 'Bulan', 'peduli' => 'Kemanusiaan', 'sehat' => 'Kesehatan', 'makmur' => 'Ekonomi', 'cerdas' => 'Pendidikan', 'taqwa' => 'Dakwah', 'total' => 'Total jiwa'],
+            'grup' => [
+                'pilar' => ['judul' => 'Jumlah penerima manfaat (jiwa)', 'kelas' => 'grid gap-4 sm:grid-cols-2',
+                            'hint' => 'Isi kelima pilar sekaligus; kosongkan pilar yang tidak ada penerimanya. Persentase & total dihitung otomatis.'],
+            ],
+            'field' => [
+                'periode'      => ['tipe' => 'bulan', 'label' => 'Bulan dan tahun', 'aturan' => 'required|date', 'hint' => 'Satu data untuk setiap bulan.'],
+                'peduli'       => ['tipe' => 'angka', 'label' => 'Basel Peduli — Kemanusiaan', 'aturan' => 'nullable|integer|between:0,10000000', 'grup' => 'pilar', 'persen_dari' => $pilarManfaat],
+                'sehat'        => ['tipe' => 'angka', 'label' => 'Basel Sehat — Kesehatan', 'aturan' => 'nullable|integer|between:0,10000000', 'grup' => 'pilar', 'persen_dari' => $pilarManfaat],
+                'makmur'       => ['tipe' => 'angka', 'label' => 'Basel Makmur — Ekonomi', 'aturan' => 'nullable|integer|between:0,10000000', 'grup' => 'pilar', 'persen_dari' => $pilarManfaat],
+                'cerdas'       => ['tipe' => 'angka', 'label' => 'Basel Cerdas — Pendidikan', 'aturan' => 'nullable|integer|between:0,10000000', 'grup' => 'pilar', 'persen_dari' => $pilarManfaat],
+                'taqwa'        => ['tipe' => 'angka', 'label' => 'Basel Taqwa — Dakwah', 'aturan' => 'nullable|integer|between:0,10000000', 'grup' => 'pilar', 'persen_dari' => $pilarManfaat],
+                'total'        => ['tipe' => 'jumlah', 'label' => 'Total penerima manfaat', 'dari' => $pilarManfaat, 'satuan' => 'jiwa', 'grup' => 'pilar'],
+                'penghimpunan' => ['tipe' => 'rupiah', 'label' => 'Total penghimpunan ZIS bulan ini (opsional)', 'aturan' => 'nullable|integer|between:0,999999999999',
+                                   'hint' => 'Tampil di situs sebagai "Total Penghimpunan" bila semua bulan pada laporan sudah diisi. Kosongkan bila tidak ingin diumumkan.'],
+                'keterangan'   => ['tipe' => 'panjang', 'label' => 'Keterangan (internal)', 'aturan' => 'nullable|max:2000'],
+                'petugas'      => ['tipe' => 'teks', 'label' => 'Petugas pencatat', 'aturan' => 'nullable|max:100', 'bawaan' => 'nama_admin'],
+            ],
+            'hook'  => App\Admin\PenerimaManfaatHook::class,
+            'cache' => [],
+        ],
+
         // 5 item bottom navigation (HP): kunci & urutan tetap (config/menu.php), admin hanya mengganti label & gambar ikon
         'ikon-navigasi' => [
             'judul' => 'Ikon Navigasi Bawah', 'tunggal' => 'ikon navigasi', 'tabel' => 'ikon_nav', 'pk' => 'id',
             'urut' => 'urutan, id', 'aksi' => ['ubah'],
-            'keterangan' => 'Lima tombol di bilah bawah layar HP. Unggah gambar untuk mengganti ikon; kosongkan (centang "Hapus file ini") untuk kembali ke ikon bawaan. Ikon yang tidak aktif otomatis tampil keabu-abuan, berwarna saat halamannya dibuka. Kolom Kunci = nama ikon bawaan per posisi: "program" (posisi 2) kini menu Layanan, "kabar" (posisi 4) kini menu Program.',
+            'keterangan' => 'Lima tombol di bilah bawah layar HP. Unggah gambar untuk mengganti ikon; kosongkan (centang "Hapus file ini") untuk kembali ke ikon bawaan. Semua ikon tampil berwarna asli; menu halaman yang sedang dibuka ditandai garis di atas ikon & label tebal. Kolom Kunci = nama ikon bawaan per posisi: "program" (posisi 2) kini menu Layanan, "kabar" (posisi 4) kini menu Program.',
             'kolom' => ['ikon' => 'gambar', 'label' => 'teks', 'kunci' => 'teks'],
             'label_kolom' => ['kunci' => 'Kunci (ikon bawaan)'],
             'field' => [
@@ -216,17 +299,23 @@ return [
             'cache' => ['site'],
         ],
 
+        // Kegiatan BAZNAS = tabel sub_program (sub-program pilar). Foto & deskripsi (migrasi 018) tampil di "Kegiatan Kami" /tentang.
         'sub-program' => [
-            'judul' => 'Sub-program', 'tunggal' => 'sub-program', 'tabel' => 'sub_program', 'pk' => 'id_sub_program',
-            'urut' => 'id_kategori_program, id_sub_program', 'cari' => ['sub_program'],
-            'kolom' => ['sub_program' => 'teks', 'id_kategori_program' => 'pilihan', 'slug' => 'teks'],
+            'judul' => 'Kegiatan BAZNAS', 'tunggal' => 'kegiatan', 'tabel' => 'sub_program', 'pk' => 'id_sub_program',
+            'urut' => 'id_kategori_program, id_sub_program', 'cari' => ['sub_program', 'deskripsi'],
+            'keterangan' => 'Kegiatan (sub-program) tiap pilar. Tampil sebagai kartu di bagian "Kegiatan Kami" halaman Tentang Kami (/tentang) dan sebagai penyaring kegiatan di halaman pilar program. Kabar & Kegiatan serta Distribusi juga memilih dari daftar ini.',
+            'kolom' => ['foto' => 'gambar', 'sub_program' => 'teks', 'id_kategori_program' => 'pilihan', 'slug' => 'teks'],
+            'label_kolom' => ['sub_program' => 'Nama kegiatan', 'id_kategori_program' => 'Pilar'],
             'field' => [
-                'sub_program'         => ['tipe' => 'teks', 'label' => 'Nama sub-program', 'aturan' => 'required|max:100'],
+                'sub_program'         => ['tipe' => 'teks', 'label' => 'Nama kegiatan', 'aturan' => 'required|max:100', 'hint' => 'Mis. Bantuan Modal Usaha Produktif.'],
                 'id_kategori_program' => ['tipe' => 'pilihan', 'label' => 'Pilar', 'aturan' => 'required',
                                           'sumber' => 'SELECT id_kategori_program, label FROM kategori_program ORDER BY urutan'],
+                'deskripsi'           => ['tipe' => 'panjang', 'label' => 'Deskripsi singkat', 'aturan' => 'nullable|max:300', 'hint' => 'Tampil di bawah nama kegiatan (±2 baris).'],
+                'foto'                => ['tipe' => 'gambar', 'label' => 'Foto (opsional)', 'folder' => 'kegiatan', 'kolom_w' => 'foto_w', 'kolom_h' => 'foto_h',
+                                          'hint' => 'Persegi (1:1), mis. 1080 × 1080 px (ukuran unggahan Instagram) atau 800 × 800 px; rasio lain dipotong bagian tengahnya. Kosong = kotak ikon pilar.'],
                 'slug'                => ['tipe' => 'slug', 'label' => 'Slug', 'dari' => 'sub_program', 'maks' => 100],
             ],
-            'cache' => [],
+            'cache' => ['site'],
         ],
 
         'zakat' => [
@@ -321,10 +410,12 @@ return [
         'halaman' => [
             'judul' => 'Halaman', 'tunggal' => 'halaman', 'tabel' => 'halaman', 'pk' => 'id',
             'urut' => 'grup, urutan, id', 'cari' => ['judul'],
-            'kolom' => ['judul' => 'teks', 'grup' => 'pilihan', 'slug' => 'teks', 'publish' => 'publish'],
+            'kolom' => ['gambar' => 'gambar', 'judul' => 'teks', 'grup' => 'pilihan', 'slug' => 'teks', 'publish' => 'publish'],
             'tautan' => '/halaman/{slug}',
             'field' => [
                 'judul'   => ['tipe' => 'teks', 'label' => 'Judul', 'aturan' => 'required|max:150'],
+                'gambar'  => ['tipe' => 'gambar', 'label' => 'Gambar halaman (opsional)', 'folder' => 'halaman', 'kolom_w' => 'gambar_w', 'kolom_h' => 'gambar_h',
+                              'hint' => 'Tampil di atas isi halaman ini. Untuk kelompok Tentang Kami juga menjadi kartu di halaman Profil Kami (/tentang). Potret ±11:12, mis. 1200 × 1310 px (atau 1100 × 1200 px). Kosong = tanpa gambar (kartu berikon).'],
                 'grup'    => ['tipe' => 'pilihan', 'label' => 'Kelompok', 'aturan' => 'required',
                               'pilihan' => ['tentang' => 'Tentang Kami (menu Tentang)', 'ketentuan' => 'Ketentuan (footer)', 'layanan' => 'Layanan (footer)', 'lainnya' => 'Lainnya']],
                 'konten'  => ['tipe' => 'html', 'label' => 'Isi', 'aturan' => 'required'],

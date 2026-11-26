@@ -47,11 +47,9 @@ $blok = 'mx-auto max-w-6xl px-4 py-10 lg:py-16';
 
 <section class="<?= $blok ?>" aria-labelledby="k-program">
     <?= $this->insert('components/section-title', ['judul' => 'Program Kami', 'id' => 'k-program', 'tengah' => true, 'subjudul' => 'card-program — 5 pilar']) ?>
-    <ul class="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
-        <?php foreach ($pilar as $i => $p): ?>
-        <li class="<?= $i === count($pilar) - 1 && count($pilar) % 2 === 1 ? 'col-span-2 lg:col-span-1' : '' ?>">
-            <?= $this->insert('components/card-program', ['pilar' => $p]) ?>
-        </li>
+    <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        <?php foreach ($pilar as $p): ?>
+        <li><?= $this->insert('components/card-program', ['pilar' => $p]) ?></li>
         <?php endforeach ?>
     </ul>
 </section>

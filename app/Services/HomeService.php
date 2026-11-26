@@ -15,7 +15,7 @@ use App\Models\Video;
 
 /**
  * Semua data beranda dalam satu fungsi ber-cache (TTL 10 menit).
- * Panggil HomeService::forget() setelah admin menyimpan banner, layanan, post, video,
+ * Panggil HomeService::forget() setelah admin menyimpan banner, donasi, layanan, post, video,
  * testimoni, mitra, atau penjelasan zakat (Fase 7). Pilar, setting & rekening ada di SiteService.
  */
 final class HomeService
@@ -44,6 +44,7 @@ final class HomeService
                     'dim_mobile' => self::ukuran('banner', $b['foto_mobile']),
                 ], Banner::terbit(5)),
                 'layanan'   => Layanan::terbit(Layanan::MAKS_BERANDA),
+                'donasi'    => DonasiService::berjalan(6), // program donasi berjalan (kartu di bawah Kabar BAZNAS)
                 'kabar'     => $kabar,
                 'video'     => Video::terbaru(6),
                 'zakat'     => DeskripsiZakat::daftar(),

@@ -10,6 +10,7 @@ use App\Models\IkonNav;
 use App\Models\KategoriProgram;
 use App\Models\Rekening;
 use App\Models\Setting;
+use App\Models\SubProgram;
 
 /**
  * Data yang dibutuhkan layout di setiap halaman (header, menu, footer), diambil sekali lalu di-cache.
@@ -32,6 +33,25 @@ final class SiteService
     public static function pilar(): array
     {
         return self::data()['pilar'];
+    }
+
+    /**
+     * Kegiatan BAZNAS (sub-program) dengan foto & deskripsi, urut pilar, masing-masing membawa data pilarnya
+     * ('pilar': tautan /program/{pilar}?sub= & kotak ikon pengganti foto). Kegiatan tanpa pilar terbit dilewati.
+     *
+     * @return list<array> lihat SubProgram::semua() + ['pilar' => array]
+     */
+    public static function kegiatan(): array
+    {
+        $pilarPerId = array_column(self::pilar(), null, 'id');
+        $hasil = [];
+        foreach (self::data()['kegiatan'] ?? [] as $k) {
+            if (isset($pilarPerId[$k['id_pilar']])) {
+                $hasil[] = $k + ['pilar' => $pilarPerId[$k['id_pilar']]];
+            }
+        }
+
+        return $hasil;
     }
 
     /** Ikon & label bottom navigation dari admin, per kunci. @return array<string, array{label: string, ikon: ?string}> */
@@ -62,6 +82,7 @@ final class SiteService
         return self::$data ??= Cache::remember(self::CACHE_KEY, 600, static fn (): array => [
             'setting'  => Setting::all(),
             'pilar'    => KategoriProgram::pilar(),
+            'kegiatan' => SubProgram::semua(),
             'rekening' => Rekening::all(),
             'halaman'  => Halaman::terbitPerGrup(),
             'ikonNav'  => IkonNav::semua(),

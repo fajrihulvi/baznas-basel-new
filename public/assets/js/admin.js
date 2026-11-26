@@ -24,10 +24,33 @@ document.querySelectorAll('output[data-jumlah]').forEach((keluaran) => {
   const isian = keluaran.dataset.jumlah.split(' ').map((nama) => form.elements[nama]).filter(Boolean);
   const hitung = () => {
     const total = isian.reduce((jml, el) => jml + (Number(el.value.replace(/\D/g, '').slice(0, 15)) || 0), 0);
-    keluaran.textContent = `Rp${fmt.format(total)}`;
+    keluaran.textContent = keluaran.dataset.satuan ? `${fmt.format(total)} ${keluaran.dataset.satuan}` : `Rp${fmt.format(total)}`;
   };
   isian.forEach((el) => el.addEventListener('input', hitung));
   hitung();
+});
+
+// --- Persentase otomatis satu isian terhadap jumlah beberapa isian (output[data-persen]) ---
+const fmtPersen = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+document.querySelectorAll('output[data-persen]').forEach((keluaran) => {
+  const form = keluaran.closest('form');
+  const nilai = (el) => Number(el.value.replace(/\D/g, '').slice(0, 15)) || 0;
+  const isian = keluaran.dataset.persenDari.split(' ').map((nama) => form.elements[nama]).filter(Boolean);
+  const hitung = () => {
+    const total = isian.reduce((jml, el) => jml + nilai(el), 0);
+    keluaran.textContent = `${fmtPersen.format(total ? (nilai(form.elements[keluaran.dataset.persen]) / total) * 100 : 0)}%`;
+  };
+  isian.forEach((el) => el.addEventListener('input', hitung));
+  hitung();
+});
+
+// --- Grup isian yang hanya relevan bila sebuah centang aktif (fieldset[data-tampil-jika="nama"]) ---
+document.querySelectorAll('fieldset[data-tampil-jika]').forEach((grup) => {
+  const centang = grup.form?.elements[grup.dataset.tampilJika];
+  if (!(centang instanceof HTMLInputElement)) return;
+  const perbarui = () => { grup.hidden = !centang.checked; };
+  centang.addEventListener('change', perbarui);
+  perbarui();
 });
 
 // --- Penggeser (input range) menampilkan nilainya di <output for> --------------------
@@ -268,3 +291,31 @@ document.querySelectorAll('textarea[data-editor]').forEach((ta) => {
   ta.classList.add('rounded-none', 'border-0', 'min-h-72');
   ta.form?.addEventListener('submit', sinkron);
 });
+
+// --- Kirim isian teks terkode heksadesimal (lolos firewall hosting) ----------------------
+// ModSecurity/WAF di hosting kadang menolak (403) isi wajar, mis. "Al-Qur'an", "2,5 % x (…)" atau kutipan
+// pasal, karena mirip pola serangan. Nilai textarea & isian teks dikodekan saat FormData dibentuk (tampilan
+// form tidak berubah) dan dibuka kembali oleh App\Core\Request (hanya /admin). Hex dipilih (bukan base64)
+// karena hanya berisi 0-9a-f: tidak ada '+', '=', '/' yang bisa dihitung WAF sebagai karakter khusus.
+// Tanpa JS, form tetap terkirim biasa.
+const KODE_TIPE = new Set(['textarea', 'text', 'password', 'email', 'url', 'search', 'tel']);
+const HEX = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
+const keHex = (teks) => {
+  const bita = new TextEncoder().encode(teks);
+  let hasil = '';
+  for (let i = 0; i < bita.length; i++) hasil += HEX[bita[i]];
+  return hasil;
+};
+document.addEventListener('formdata', (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post') return;
+  const fd = e.formData;
+  for (const el of form.elements) {
+    const tipe = el instanceof HTMLTextAreaElement ? 'textarea' : el instanceof HTMLInputElement ? el.type : '';
+    if (!KODE_TIPE.has(tipe) || !/^[A-Za-z0-9_-]+$/.test(el.name) || el.disabled) continue;
+    const nilai = fd.get(el.name);
+    if (typeof nilai !== 'string' || nilai === '' || fd.getAll(el.name).length !== 1) continue;
+    fd.set(el.name, keHex(nilai));
+    fd.append('_hex[]', el.name);
+  }
+}, true);

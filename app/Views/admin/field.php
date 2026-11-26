@@ -25,6 +25,7 @@ $nilai = match (true) {
         'bulan_ini'  => date('Y-m-01'),
         
         'nama_admin' => ResourceController::namaAdmin(),
+        'kosong'     => '', // mis. tanggal yang tidak boleh terisi hari ini secara otomatis
         null         => '',
         default      => (string) $f['bawaan'],
     },
@@ -49,7 +50,7 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
     </label>
 
     <?php if ($f['tipe'] === 'panjang'): ?>
-    <textarea id="<?= e($id) ?>" name="<?= e($nama) ?>" rows="3"<?= $wajib ? ' required' : '' ?><?= $aria ?> class="<?= $kelasInput ?> py-3"><?= e($nilai) ?></textarea>
+    <textarea id="<?= e($id) ?>" name="<?= e($nama) ?>" rows="<?= (int) ($f['baris'] ?? 3) ?>"<?= $wajib ? ' required' : '' ?><?= $aria ?> class="<?= $kelasInput ?> py-3"><?= e($nilai) ?></textarea>
 
     <?php elseif ($f['tipe'] === 'html'): ?>
     <textarea id="<?= e($id) ?>" name="<?= e($nama) ?>" rows="14" data-editor data-unggah="<?= e(url('admin/unggah-gambar')) ?>"<?= $aria ?> class="<?= $kelasInput ?> py-3 font-mono text-sm"><?= e($nilai) ?></textarea>
@@ -143,7 +144,8 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
     $jumlah = $adaLama ? array_sum(array_map(static fn (string $k): int => angka($lama[$k] ?? ''), $f['dari'])) : (int) ($baris[$nama] ?? 0);
     ?>
     <output id="<?= e($id) ?>" for="<?= e(implode(' ', array_map(static fn (string $k): string => 'f-' . $k, $f['dari']))) ?>" data-jumlah="<?= e(implode(' ', $f['dari'])) ?>"
-            class="block text-2xl font-bold text-ink" style="font-variant-numeric: tabular-nums"<?= $aria ?>><?= e(format_rupiah($jumlah)) ?></output>
+            <?= !empty($f['satuan']) ? ' data-satuan="' . e($f['satuan']) . '"' : '' ?>
+            class="block text-2xl font-bold text-ink" style="font-variant-numeric: tabular-nums"<?= $aria ?>><?= e(!empty($f['satuan']) ? number_format($jumlah, 0, ',', '.') . ' ' . $f['satuan'] : format_rupiah($jumlah)) ?></output>
 
     <?php elseif ($f['tipe'] === 'angka' && !empty($f['geser'])): ?>
     <?php [$min, $maks, $langkah, $awal] = $f['geser'] + [0, 100, 5, 100]; $nilaiGeser = $nilai !== '' ? $nilai : (string) $awal; ?>
@@ -159,7 +161,7 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
         $nilai = number_format((int) $nilai, 0, ',', '.'); // tampil 1.500.000
     }
     [$type, $extra] = match ($f['tipe']) {
-        'angka'   => ['number', ' inputmode="numeric"'],
+        'angka'   => ['number', ' inputmode="numeric"' . (!empty($f['persen_dari']) ? ' min="0" step="1"' : '')],
         'rupiah'  => ['text', ' inputmode="numeric" data-rupiah placeholder="Rp" autocomplete="off"'],
         'tanggal' => ['date', ''],
         'slug'    => ['text', ' pattern="[a-z0-9-]*" placeholder="otomatis"'],
@@ -167,6 +169,15 @@ $aria = ($deskripsi !== '' ? ' aria-describedby="' . e($deskripsi) . '"' : '') .
     };
     ?>
     <input type="<?= $type ?>" id="<?= e($id) ?>" name="<?= e($nama) ?>" value="<?= e($nilai) ?>"<?= $wajib ? ' required' : '' ?><?= $aria ?><?= $extra ?> class="<?= $kelasInput ?> h-12">
+    <?php if (!empty($f['persen_dari'])): ?>
+    <?php
+    // Persentase otomatis terhadap jumlah beberapa field (diperbarui admin.js saat mengetik; tidak disimpan)
+    $ambil = static fn (string $k): int => angka((string) ($adaLama ? ($lama[$k] ?? '') : ($baris[$k] ?? '')));
+    $semua = array_sum(array_map($ambil, $f['persen_dari']));
+    ?>
+    <output for="<?= e($id) ?>" data-persen="<?= e($nama) ?>" data-persen-dari="<?= e(implode(' ', $f['persen_dari'])) ?>"
+            class="mt-1.5 block text-sm font-semibold text-primary" style="font-variant-numeric: tabular-nums"><?= e(App\Models\PenerimaManfaat::persen($ambil($nama), $semua)) ?></output>
+    <?php endif ?>
     <?php endif ?>
     <?php endif ?>
 

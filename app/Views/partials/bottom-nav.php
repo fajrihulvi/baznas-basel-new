@@ -3,6 +3,7 @@
 
 use App\Services\Navigation;
 ?>
+<?php /* Semua ikon selalu berwarna asli (bukan keabu-abuan saat tidak aktif); halaman aktif ditandai garis atas & label tebal */ ?>
 <nav aria-label="Navigasi bawah" class="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
     <?php /* Selebar layar (container-fluid): item lebar tetap + justify-between → ikon pertama & terakhir mepet ke tepi,
              tombol tengah tetap persis di tengah layar (susunan simetris) */ ?>
@@ -12,7 +13,7 @@ use App\Services\Navigation;
             <?php if ($item['url'] === null): ?>
             <button type="button" data-sheet-open aria-controls="menu-sheet" aria-haspopup="dialog" aria-expanded="false"
                     class="group flex w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted hover:text-primary">
-                <?= $item['svg'] !== null ? $this->insert('partials/ikon-nav', ['nama' => $item['svg'], 'aktif' => false, 'buka' => true, 'ukuran' => 'size-12', 'gambar' => $item['gambar']]) : icon($item['ikon']) ?>
+                <?= $item['svg'] !== null ? $this->insert('partials/ikon-nav', ['nama' => $item['svg'], 'aktif' => false, 'berwarna' => true, 'ukuran' => 'size-12', 'gambar' => $item['gambar']]) : icon($item['ikon']) ?>
                 <?= e($item['label']) ?>
             </button>
             <?php elseif ($item['tengah']): ?>
@@ -35,7 +36,7 @@ use App\Services\Navigation;
             <a href="<?= e(url($item['url'])) ?>" <?= $item['aktif'] ? 'aria-current="page"' : '' ?>
                class="group relative flex w-full flex-col items-center justify-center gap-0.5 text-[11px] <?= $item['aktif'] ? 'font-bold text-primary' : 'font-medium text-muted hover:text-primary' ?>">
                 <?php if ($item['aktif']): ?><span class="absolute top-0 h-1 w-8 rounded-b-full bg-primary" aria-hidden="true"></span><?php endif ?>
-                <?= $item['svg'] !== null ? $this->insert('partials/ikon-nav', ['nama' => $item['svg'], 'aktif' => $item['aktif'], 'ukuran' => 'size-12', 'gambar' => $item['gambar']]) : icon($item['ikon']) ?>
+                <?= $item['svg'] !== null ? $this->insert('partials/ikon-nav', ['nama' => $item['svg'], 'aktif' => $item['aktif'], 'berwarna' => true, 'ukuran' => 'size-12', 'gambar' => $item['gambar']]) : icon($item['ikon']) ?>
                 <?= e($item['label']) ?>
             </a>
             <?php endif ?>

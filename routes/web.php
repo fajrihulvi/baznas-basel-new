@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\Site\CariController;
+use App\Controllers\Site\DonasiController;
 use App\Controllers\Site\HomeController;
 use App\Controllers\Site\KalkulatorController;
 use App\Controllers\Site\PembayaranController;
@@ -40,11 +41,19 @@ $router->get('/bayar-zakat/{kode}', [PembayaranController::class, 'instruksi']);
 $router->get('/konfirmasi', [PembayaranController::class, 'konfirmasiForm']);
 $router->post('/konfirmasi', [PembayaranController::class, 'konfirmasiSimpan']);
 
+// Donasi (banner program donasi)
+$router->get('/donasi', [DonasiController::class, 'index']);
+$router->get('/donasi/transfer/{kode}', [DonasiController::class, 'instruksi']);
+$router->get('/donasi/{slug}', [DonasiController::class, 'show']);
+$router->get('/donasi/{slug}/bayar', [DonasiController::class, 'formulir']);
+$router->post('/donasi/{slug}/bayar', [DonasiController::class, 'simpan']);
+
 // Informasi
 $router->get('/regulasi', [RegulasiController::class, 'index']);
 $router->get('/laporan', [RegulasiController::class, 'laporan']);
 $router->get('/video', [MediaController::class, 'video']);
 $router->get('/galeri', [MediaController::class, 'galeri']);
+$router->get('/arsip', [MediaController::class, 'arsip']);
 
 // Tentang & halaman statis
 $router->get('/tentang', [PageController::class, 'tentangIndex']);

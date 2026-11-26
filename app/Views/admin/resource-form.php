@@ -42,7 +42,8 @@ $adaFile = (bool) array_filter($r->field(), static fn (array $f): bool => in_arr
     ?>
     <?php foreach ($bagian as [$g, $isi]): ?>
     <?php if ($g !== null && ($grup = $r->grup($g)) !== null): ?>
-    <fieldset class="rounded-2xl border border-gray-200 bg-surface/50 p-4 sm:p-5"<?= !empty($grup['hint']) ? ' aria-describedby="grup-' . e($g) . '-hint"' : '' ?>>
+    <?php // 'tampil_jika' => nama centang: grup hanya terlihat saat dicentang (admin.js); tanpa JS selalu tampil ?>
+    <fieldset class="rounded-2xl border border-gray-200 bg-surface/50 p-4 sm:p-5"<?= !empty($grup['hint']) ? ' aria-describedby="grup-' . e($g) . '-hint"' : '' ?><?= !empty($grup['tampil_jika']) ? ' data-tampil-jika="' . e($grup['tampil_jika']) . '"' : '' ?>>
         <legend class="float-left w-full font-bold text-ink"><?= e($grup['judul']) ?></legend>
         <?php if (!empty($grup['hint'])): ?>
         <p id="grup-<?= e($g) ?>-hint" class="clear-left pt-1 text-sm text-muted"><?= e($grup['hint']) ?></p>

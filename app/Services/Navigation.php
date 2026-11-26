@@ -36,13 +36,45 @@ final class Navigation
         ], (array) config('menu.bawah', []));
     }
 
-    /** @return list<array{judul: string, item: list<array{label: string, url: string, ikon: string}>}> */
+    /** Sub-menu satu item 'utama' (mis. 'Tentang') yang sudah dirakit. @return list<array{label: string, url: string, ikon: string}> */
+    public static function anakUtama(string $label): array
+    {
+        foreach ((array) config('menu.utama', []) as $m) {
+            if ($m['label'] === $label) {
+                return self::rakit($m['anak']);
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Panel menu HP: tautan langsung ('url') atau grup bersub-menu yang mengambil anak & penanda aktif dari menu 'utama' ('dari').
+     *
+     * @return list<array{label: string, url: ?string, aktif: bool, anak: list<array{label: string, url: string, ikon: string}>}>
+     */
     public static function sheet(): array
     {
-        return array_map(static fn (array $grup): array => [
-            'judul' => $grup['judul'],
-            'item'  => self::rakit($grup['item']),
-        ], (array) config('menu.sheet', []));
+        $utama = [];
+        foreach ((array) config('menu.utama', []) as $m) {
+            $utama[$m['label']] = $m;
+        }
+
+        $hasil = [];
+        foreach ((array) config('menu.sheet', []) as $item) {
+            if (isset($item['url'])) {
+                $aktif = isset($item['aktif']) ? self::aktif($item['aktif']) : self::aktif([$item['url']], true);
+                $hasil[] = ['label' => $item['label'], 'url' => $item['url'], 'aktif' => $aktif, 'anak' => []];
+                continue;
+            }
+            $sumber = $utama[$item['dari']] ?? null;
+            if ($sumber === null) {
+                continue;
+            }
+            $hasil[] = ['label' => $item['label'], 'url' => null, 'aktif' => self::aktif($sumber['aktif']), 'anak' => self::rakit($sumber['anak'])];
+        }
+
+        return $hasil;
     }
 
     /** @param list<string> $awalan */

@@ -71,6 +71,8 @@ $px = count($r->kolom()) >= 7 ? 'px-3' : 'px-4'; // tabel berkolom banyak: sel l
                     <span class="whitespace-nowrap"><?= e(tgl_id($nilai)) ?></span>
                     <?php elseif ($tipe === 'angka'): ?>
                     <span style="font-variant-numeric: tabular-nums"><?= e(number_format((int) $nilai, 0, ',', '.')) ?></span>
+                    <?php elseif ($tipe === 'angka_persen'): ?>
+                    <span class="whitespace-nowrap" style="font-variant-numeric: tabular-nums"><span class="font-semibold text-ink"><?= e(number_format((int) $nilai, 0, ',', '.')) ?></span><br><span class="text-xs text-muted"><?= e(App\Models\PenerimaManfaat::persen((int) $nilai, (int) ($b['total'] ?? 0))) ?></span></span>
                     <?php elseif ($tipe === 'format'): ?>
                     <?= $nilai ? '<span class="inline-flex rounded-full bg-surface px-2.5 py-0.5 text-xs font-semibold text-ink">' . e(format_dokumen((string) $nilai)) . '</span>' : '<span class="text-muted">—</span>' ?>
                     <?php elseif ($tipe === 'bulan'): ?>

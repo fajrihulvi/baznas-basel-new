@@ -13,6 +13,8 @@
  * @var array|null  $pengumpulan StatistikPengumpulanService::untuk() (null = belum dimigrasi)
  * @var array<string, string> $filterZakat       parameter filter zakat masuk yang aktif (ikut dikirim filter pengumpulan)
  * @var array<string, string> $filterPengumpulan parameter filter pengumpulan yang aktif (ikut dikirim filter zakat)
+ * @var array|null  $penerima   StatistikPenerimaManfaatService::untuk() (null = belum dimigrasi)
+ * @var array<string, string> $filterPenerima    parameter filter penerima manfaat yang aktif
  */
 
 use App\Controllers\Admin\PembayaranController;
@@ -23,9 +25,10 @@ $this->layout('admin', ['title' => 'Dasbor']);
 if ($kepala):
 ?>
 <h1 class="text-2xl font-bold">Assalamu'alaikum, <?= e(Auth::user()['nama'] ?? '') ?></h1>
-<p class="mt-1 text-muted">Perkembangan zakat masuk, pengumpulan, dan penyaluran BAZNAS Kabupaten Bangka Selatan.</p>
-<?= $this->insert('admin/statistik', ['s' => $statistik, 'pertahankan' => $filterPengumpulan]) ?>
-<?= $this->insert('admin/statistik-pengumpulan', ['p' => $pengumpulan, 'pertahankan' => $filterZakat]) ?>
+<p class="mt-1 text-muted">Perkembangan zakat masuk, pengumpulan, penyaluran, dan penerima manfaat BAZNAS Kabupaten Bangka Selatan.</p>
+<?= $this->insert('admin/statistik', ['s' => $statistik, 'pertahankan' => $filterPengumpulan + $filterPenerima]) ?>
+<?= $this->insert('admin/statistik-pengumpulan', ['p' => $pengumpulan, 'pertahankan' => $filterZakat + $filterPenerima]) ?>
+<?= $this->insert('admin/statistik-penerima', ['m' => $penerima, 'pertahankan' => $filterZakat + $filterPengumpulan]) ?>
 <?php
     return;
 endif;
@@ -67,8 +70,9 @@ $kartu = [
     <?php endforeach ?>
 </ul>
 
-<?= $this->insert('admin/statistik', ['s' => $statistik, 'pertahankan' => $filterPengumpulan]) ?>
-<?= $this->insert('admin/statistik-pengumpulan', ['p' => $pengumpulan, 'pertahankan' => $filterZakat]) ?>
+<?= $this->insert('admin/statistik', ['s' => $statistik, 'pertahankan' => $filterPengumpulan + $filterPenerima]) ?>
+<?= $this->insert('admin/statistik-pengumpulan', ['p' => $pengumpulan, 'pertahankan' => $filterZakat + $filterPenerima]) ?>
+<?= $this->insert('admin/statistik-penerima', ['m' => $penerima, 'pertahankan' => $filterZakat + $filterPengumpulan]) ?>
 
 <div class="mt-8 grid gap-6 xl:grid-cols-2">
     <section class="rounded-2xl border border-gray-200 bg-white p-5" aria-labelledby="judul-antrean">

@@ -1,8 +1,11 @@
 <?php
 /**
- * /layanan — ikon layanan zakat (dipindah dari "aksi cepat" beranda). Tujuan menu "Layanan" di bilah navigasi bawah.
+ * /layanan — tujuan menu "Layanan" (bilah navigasi bawah & panel menu HP): ikon layanan zakat (dipindah dari
+ * "aksi cepat" beranda), kartu Tunaikan Zakat 2 kolom (sama dengan beranda), lalu kartu Kegiatan BAZNAS.
  *
  * @var App\Core\View $this
+ * @var list<array> $tunaikan  kartu Tunaikan Zakat (admin → Tunaikan Zakat (Beranda), maks. 4)
+ * @var list<array> $kegiatan  SiteService::kegiatan()
  */
 $this->layout('site', [
     'title'       => 'Layanan',
@@ -43,3 +46,17 @@ $layanan = [
         <?php endforeach ?>
     </ul>
 </div>
+
+<?php if ($tunaikan !== []): ?>
+<section class="mx-auto max-w-4xl px-4 pb-10 lg:pb-14" aria-labelledby="judul-tunaikan-zakat">
+    <h2 id="judul-tunaikan-zakat" class="text-2xl font-bold tracking-wide text-primary uppercase lg:text-3xl">Tunaikan Zakat</h2>
+    <span class="mt-2 block h-1 w-40 bg-[#ef8a14] lg:w-48" aria-hidden="true"></span>
+    <ul class="mt-6 grid grid-cols-2 gap-3 sm:gap-6">
+        <?php foreach ($tunaikan as $l): ?>
+        <li><?= $this->insert('components/card-layanan', ['layanan' => $l]) ?></li>
+        <?php endforeach ?>
+    </ul>
+</section>
+<?php endif ?>
+
+<?= $this->insert('components/kegiatan-baznas', ['kegiatan' => $kegiatan, 'judul' => 'Kegiatan BAZNAS', 'id' => 'judul-kegiatan-baznas']) ?>

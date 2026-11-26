@@ -22,12 +22,15 @@ final class SitemapService
         '/program'          => '0.8',
         '/berita'           => '0.8',
         '/layanan'          => '0.7',
+        '/tentang'          => '0.6',
         '/rekening'         => '0.7',
         '/konfirmasi'       => '0.5',
         '/regulasi'         => '0.6',
         '/laporan'          => '0.6',
         '/video'            => '0.5',
         '/galeri'           => '0.5',
+        '/arsip'            => '0.5',
+        '/donasi'           => '0.7',
         '/amil'             => '0.5',
         '/testimoni'        => '0.4',
     ];
@@ -44,6 +47,9 @@ final class SitemapService
             }
             foreach (ZakatService::daftar() as $z) {
                 $url[] = ['/zakat/' . $z['slug'], null, '0.7'];
+            }
+            foreach (DonasiService::program() as $d) {
+                $url[] = ['/donasi/' . $d['slug'], null, $d['status'] === 'berjalan' ? '0.7' : '0.4'];
             }
             foreach (Halaman::untukSitemap() as $h) {
                 $url[] = [($h['grup'] === 'tentang' ? '/tentang/' : '/halaman/') . $h['slug'], $h['updated_at'], '0.5'];

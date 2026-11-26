@@ -26,6 +26,8 @@ php tests/http/uji_distribusi.php http://localhost:8002   # menu Distribusi: CRU
 php tests/http/uji_testimoni.php http://localhost:8002    # form testimoni pengunjung: validasi, anti-spam, moderasi admin
 php tests/http/uji_tampilan.php http://localhost:8002     # warna kotak ikon pilar, Ikon Navigasi bawah, kartu Tunaikan Zakat
 php tests/http/uji_pengumpulan.php http://localhost:8002  # menu Pengumpulan & Perangkat Daerah, impor Excel, statistik dasbor, akses Kepala
+php tests/http/uji_penerima.php http://localhost:8002     # menu Penerima Manfaat: validasi, persentase, laporan dasbor & publik, peran
+php tests/http/uji_donasi.php http://localhost:8002       # banner donasi, halaman & formulir donasi, verifikasi admin Donasi Bantuan, peran
 php tests/http/uji_dilihat.php http://localhost:8002      # penghitung dilihat berita: asal permintaan, hitung ganda, bot, petugas, batas laju
 php tests/http/uji_laporan.php http://localhost:8002      # laporan keuangan: satu isian PDF atau Excel, validasi isi file, halaman /laporan
 ```

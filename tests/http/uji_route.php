@@ -31,7 +31,7 @@ $halaman = [
     '/zakat' => 200, '/zakat/zakat-fitrah' => 200, '/zakat/tidak-ada' => 404,
     '/layanan' => 200, '/rekening' => 200, '/regulasi' => 200, '/regulasi?kategori=2' => 200, '/regulasi?kategori=8' => 200, '/regulasi?kategori=abc' => 200,
     '/laporan' => 200, '/video' => 200, '/galeri' => 200, '/galeri?jenis=poster' => 200,
-    '/tentang' => 302, '/tentang/profil' => 200, '/tentang/visi-misi' => 200, '/halaman/kurban' => 200,
+    '/tentang' => 200, '/tentang/profil' => 200, '/tentang/visi-misi' => 200, '/halaman/kurban' => 200,
     '/halaman/profil' => 301, '/tentang/kurban' => 301, '/halaman/faq' => 404,
     '/amil' => 200, '/testimoni' => 200, '/cari' => 200, '/cari?q=zakat' => 200, '/cari?q=ab' => 200, '/cari?q=%25%25' => 200,
     '/sitemap.xml' => 200, '/robots.txt' => 200, '/tidak-ada' => 404, '/berita?hal=999' => 200,

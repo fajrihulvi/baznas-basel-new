@@ -7,6 +7,7 @@
  * @var list<array> $layanan
  * @var list<array> $pilar
  * @var array<string, list<array>> $kabar  per tab HomeService::TAB_KABAR
+ * @var list<array> $donasi     program donasi berjalan (DonasiService::berjalan)
  * @var list<array> $video
  * @var list<array> $zakat      judul, slug
  * @var list<array> $testimoni
@@ -185,6 +186,20 @@ $navProgram = $ikonBawah['/program'] ?? null;
     <?php endforeach ?>
 </section>
 
+<?php /* 6b. Program donasi (banner donasi yang sedang berjalan) */ ?>
+<?php if (($donasi ?? []) !== []): ?>
+<section class="cv-auto border-t border-gray-200" aria-labelledby="judul-donasi">
+    <div class="<?= $blok ?>">
+        <?= $this->insert('components/section-title', ['judul' => 'Program Donasi', 'id' => 'judul-donasi', 'subjudul' => 'Salurkan kepedulian Anda untuk program bantuan BAZNAS Bangka Selatan.', 'link' => '/donasi']) ?>
+        <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+            <?php foreach ($donasi as $d): ?>
+            <li><?= $this->insert('components/card-donasi', ['program' => $d, 'heading' => 'h3']) ?></li>
+            <?php endforeach ?>
+        </ul>
+    </div>
+</section>
+<?php endif ?>
+
 <?php /* 7. Video */ ?>
 <?php if ($video !== []): ?>
 <section class="cv-auto bg-surface" aria-labelledby="judul-video">
@@ -206,8 +221,17 @@ $navProgram = $ikonBawah['/program'] ?? null;
     <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <?php foreach ($zakat as $z): ?>
         <li>
-            <a href="<?= e(url('zakat/' . $z['slug'])) ?>" class="flex h-full min-h-14 items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-primary hover:text-primary">
-                <?= icon('book', 'size-5 shrink-0 text-primary') ?><?= e($z['judul']) ?>
+            <?php /* Foto dari admin → Penjelasan Zakat (mendatar ±2:1); tanpa foto = ikon buku */ ?>
+            <a href="<?= e(url('zakat/' . $z['slug'])) ?>" class="group flex h-full flex-col rounded-xl border border-gray-200 bg-white p-1.5 text-sm font-semibold text-ink transition hover:border-primary hover:text-primary hover:shadow-md">
+                <span class="block aspect-[2/1] overflow-hidden rounded-lg bg-primary/10">
+                    <?php if (!empty($z['foto'])): ?>
+                    <?= img($z['foto'], 'zakat', '', ['sizes' => '(min-width: 1024px) 220px, (min-width: 640px) 33vw, 50vw',
+                        'class' => 'size-full object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100']) ?>
+                    <?php else: ?>
+                    <span class="grid size-full place-items-center text-primary"><?= icon('book', 'size-8') ?></span>
+                    <?php endif ?>
+                </span>
+                <span class="flex flex-1 items-center px-1.5 pt-2 pb-1 leading-snug"><?= e($z['judul']) ?></span>
             </a>
         </li>
         <?php endforeach ?>

@@ -25,8 +25,9 @@ final class ProgramController extends Controller
         }
 
         return $this->view('site/program', [
-            'pilar'    => $pilar,
-            'kegiatan' => Post::perSubProgram($idSub, 6, 0),
+            'pilar'          => $pilar,
+            'kegiatanBaznas' => SiteService::kegiatan(), // kartu Kegiatan BAZNAS (sub-program) di bawah 5 pilar
+            'kegiatan'       => Post::perSubProgram($idSub, 6, 0),
         ]);
     }
 

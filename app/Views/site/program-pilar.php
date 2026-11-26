@@ -3,7 +3,8 @@
  * /program/{pilar} — kegiatan satu pilar, filter sub-program (?sub=).
  *
  * @var App\Core\View $this
- * @var array       $pilar       id, nama, label, slug, deskripsi, ikon
+ * @var array       $pilar       id, nama, label, slug, deskripsi, ikon, foto, foto_w, foto_h
+ *                               (halaman 1: foto selebar kontainer + deskripsi per paragraf, lalu daftar kegiatan)
  * @var list<array> $subProgram  id, nama, slug
  * @var array|null  $subAktif
  * @var list<array> $posts
@@ -14,17 +15,43 @@ use App\Services\SiteService;
 
 $this->layout('site', [
     'title'       => $pilar['label'] . ($subAktif ? ' — ' . $subAktif['nama'] : '') . ($paginator->page > 1 ? ' — Halaman ' . $paginator->page : ''),
-    'description' => $pilar['label'] . ' (' . $pilar['nama'] . '): ' . ($pilar['deskripsi'] ?? 'program BAZNAS Kabupaten Bangka Selatan.'),
+    'description' => ringkas($pilar['label'] . ' (' . $pilar['nama'] . '): ' . ($pilar['deskripsi'] ?? 'program BAZNAS Kabupaten Bangka Selatan.')),
     'canonical'   => $paginator->url($paginator->page),
 ]);
 ?>
 <?= $this->insert('components/page-header', [
     'judul'      => $pilar['label'],
-    'subjudul'   => trim(($pilar['nama'] ? 'Program ' . mb_strtolower($pilar['nama']) . '. ' : '') . ($pilar['deskripsi'] ?? '')),
+    'subjudul'   => $pilar['nama'] ? 'Program ' . mb_strtolower($pilar['nama']) . '.' : null,
     'breadcrumb' => [['label' => 'Program', 'url' => '/program'], ['label' => $pilar['label']]],
 ]) ?>
 
+<?php
+// Foto & deskripsi pilar selebar kontainer (hanya halaman 1 agar halaman berikutnya langsung ke daftar kegiatan)
+$paragraf = array_values(array_filter(array_map('trim', preg_split('/\R+/u', (string) ($pilar['deskripsi'] ?? '')) ?: []), static fn (string $p): bool => $p !== ''));
+$tampilProfil = $paginator->page === 1 && ($paragraf !== [] || !empty($pilar['foto']));
+?>
+<?php if ($tampilProfil): ?>
+<section class="mx-auto max-w-6xl px-4 pt-8 lg:pt-12" aria-label="Tentang <?= e($pilar['label']) ?>">
+    <?php if (!empty($pilar['foto'])): ?>
+    <figure class="overflow-hidden rounded-2xl bg-surface">
+        <?= img($pilar['foto'], 'pilar', $pilar['label'], ['width' => $pilar['foto_w'] ?? null, 'height' => $pilar['foto_h'] ?? null,
+            'sizes' => '(min-width: 1152px) 1120px, calc(100vw - 2rem)', 'eager' => true, 'class' => 'h-auto w-full']) ?>
+    </figure>
+    <?php endif ?>
+    <?php if ($paragraf !== []): ?>
+    <div class="<?= !empty($pilar['foto']) ? 'mt-6 lg:mt-8 ' : '' ?>space-y-4 text-base leading-relaxed text-ink lg:text-lg">
+        <?php foreach ($paragraf as $p): ?>
+        <p><?= e($p) ?></p>
+        <?php endforeach ?>
+    </div>
+    <?php endif ?>
+</section>
+<?php endif ?>
+
 <div class="mx-auto max-w-6xl px-4 py-8 lg:py-12">
+    <?php if ($tampilProfil): ?>
+    <h2 class="mb-4 border-t border-gray-200 pt-8 text-xl font-bold text-ink lg:pt-10 lg:text-2xl">Kegiatan <?= e($pilar['label']) ?></h2>
+    <?php endif ?>
     <?php if (count($subProgram) > 1): ?>
     <?= $this->insert('components/chip-tabs', [
         'label' => 'Sub-program',
